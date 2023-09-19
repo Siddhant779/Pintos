@@ -445,23 +445,26 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
  * user virtual memory. */
 static bool
-setup_stack(void **esp)
+setup_stack(void **esp) //Keep track of pointers (modify stack pointer)
 {
-    uint8_t *kpage;
+    uint8_t *kpage; //Get user page from memory
     bool success = false;
 
     log(L_TRACE, "setup_stack()");
 
-    kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+    kpage = palloc_get_page(PAL_USER | PAL_ZERO); //Grabs user page from memory (zeroed out)
     if (kpage != NULL) {
-        success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
+        success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true); //If successful, install page
         if (success) {
-            *esp = PHYS_BASE;
+            *esp = PHYS_BASE; //Sets to start of stack
         } else {
-            palloc_free_page(kpage);
+            palloc_free_page(kpage); //Didn't work, free page
         }
         // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: uncomment this to check arg passing
     }
+
+    //3.5.1 Program Startup Details to set up stack
+
     return success;
 }
 
