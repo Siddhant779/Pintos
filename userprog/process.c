@@ -463,7 +463,12 @@ setup_stack(void **esp) //Keep track of pointers (modify stack pointer)
         // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: uncomment this to check arg passing
     }
 
-    //3.5.1 Program Startup Details to set up stack
+    //3.5.1 Program Startup Details to set up stack (strtok is your friend)
+    //Tokenize inputs to separate strings
+    //Get it in the format defined by 3.5.1
+    //esp is stack pointer, use that to literally change things at the address
+    //arg[][] is what the stack you make should look like, you should use stack as a way to change stuff directly in esp
+    //Modify setup stack to accept the second parameter (the input string argument)
 
     return success;
 }
