@@ -514,8 +514,7 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
     }
 
     //add zero argv[final]
-    
-    char nullPtr = '\0';
+    char* nullPtr = NULL;
     writeToStack(esp, &nullPtr, sizeof(char));
 
     //Add addresses (not sure how to conver addresses to char format) argv[]
@@ -533,7 +532,6 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
     //Add argv double pointer
     //let me check this later
     char **oldesp = *esp;
-
     writeToStack(esp, &oldesp, sizeof(char **));
 
     //Add argc
