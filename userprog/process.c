@@ -104,6 +104,7 @@ start_process(void *file_name_)
 int
 process_wait(tid_t child_tid UNUSED)
 {
+    // while(true) { }
     return -1;
 }
 
@@ -442,6 +443,13 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
     return true;
 }
 
+static void writeToStack(void **esp, void *obj, int size) {
+    // *esp -= size;
+    *esp = (void*)((char*)*esp - size); //weird pointer math (must cast void* to char* to ensure that size bytes are decremented)
+    memcpy(*esp, obj, size);
+    return;    
+}
+
 /* Create a minimal stack by mapping a zeroed page at the top of
  * user virtual memory. */
 static bool
@@ -469,10 +477,16 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
     //esp is stack pointer, use that to literally change things at the address
     //arg[][] is what the stack you make should look like, you should use stack as a way to change stuff directly in esp
     //Modify setup stack to accept the second parameter (the input string argument)
-    void **espCpy = esp; //Make copy of esp po
+    void *espCpy = *esp; //Make copy of esp po
     int index = 0;
     char *inputCpy;
-    strlcpy(inputCpy, input, sizeof(char *));
+    inputCpy = palloc_get_page(0);
+    if (inputCpy == NULL) {
+        return TID_ERROR;
+    }
+    strlcpy(inputCpy, input, PGSIZE);
+    // strlcpy(inputCpy, input, sizeof(char *)); //this seems to be causing some sort of error but it is unknown why or how
+    
 
     char* element = strtok_r(inputCpy, " ", &inputCpy); // there doesnt need to be a _r - (esp points to the pointer that points to stack frame *esp++ to increment)
     char** listOfArgs = (char**)malloc((index + 1) * (sizeof(char*)));
@@ -485,60 +499,57 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
         listOfArgs = (char**)realloc(listOfArgs, (index + 1) * (sizeof(char*)));
         element = strtok_r(NULL, " ",&inputCpy);
     }
-    
+    listOfArgs[index] = NULL; //null append listOfArgs
     //Push to stack (start from the end) argv[]
     for(int i = index - 1; i >= 0; i--){
         int length = strlen(listOfArgs[i]) + 1; //get length of string in bytes, include null
         //Copy to location defined by offset
-        *esp -= length;
-        strlcpy(*esp, listOfArgs[i], length);
+        writeToStack(esp, listOfArgs[i], length);
     }
 
     //add word align
-    while(((int)*esp % 4) != 0) {
-        uint8_t *zeroPad = 0; 
-        *esp -= sizeof(zeroPad); 
-        memcpy(*esp, zeroPad, 1); //use memcpy to assign variables to stack (fix expression must be modifiable lvalue error)
+    while(((int)((char*)*esp) % 4) != 0) {
+        uint8_t zeroPad = 0; 
+        writeToStack(esp, &zeroPad, sizeof(uint8_t));
     }
 
     //add zero argv[final]
-    *esp -= sizeof(char);
-    char* nullPtr = NULL;
-    memcpy(*esp, nullPtr, sizeof(char));
-
+    
+    char nullPtr = '\0';
+    writeToStack(esp, &nullPtr, sizeof(char));
 
     //Add addresses (not sure how to conver addresses to char format) argv[]
     for(int i = index - 1; i >= 0; i--){
         int length = strlen(listOfArgs[i]) + 1; //get length of string in bytes, include null
 
         //Add address
-        *espCpy -= length;
-        char* addressOfStr = (char*) *espCpy;
+        espCpy = (void*)((char*)espCpy - length);
+        char* addressOfStr = (char*) espCpy;
 
         //Add to stack, adjust offset
-        *esp -= sizeof(char*); //Should usually be 4 (might be system dependent)
-        memcpy(*esp, addressOfStr, sizeof(char*));
+        writeToStack(esp, &addressOfStr, sizeof(char*));
     }
 
     //Add argv double pointer
     //let me check this later
     char **oldesp = *esp;
-    *esp -= sizeof(char **);
-    memcpy(*esp, *oldesp, sizeof(char **));
+
+    writeToStack(esp, &oldesp, sizeof(char **));
 
     //Add argc
-    int *argc = index;
-    *esp -= sizeof(argc);
-    memcpy(*esp, argc, sizeof(int*));
+    int argc = index;
+    writeToStack(esp, &argc, sizeof(int*));
 
     //Add return address
-    void* returnAddr = 0;
-    memcpy(esp, returnAddr, sizeof(void*));
+    int returnAddr = 0;
+    writeToStack(esp, &returnAddr, sizeof(void*));
 
     free(listOfArgs);
 
     return success; 
 }
+
+
 
 /* Adds a mapping from user virtual address UPAGE to kernel
  * virtual address KPAGE to the page table.
