@@ -104,7 +104,7 @@ start_process(void *file_name_)
 int
 process_wait(tid_t child_tid UNUSED)
 {
-    // while(true) { }
+    // while(true) { } //uncomment this when testing setup_stack
     return -1;
 }
 
@@ -468,7 +468,7 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
         } else {
             palloc_free_page(kpage); //Didn't work, free page
         }
-        // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: uncomment this to check arg passing
+        // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: do not uncomment this for testing. Uncomment the hex_dump call at the end of this function instead
     }
 
     //3.5.1 Program Startup Details to set up stack (strtok is your friend)
@@ -508,14 +508,14 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
     }
 
     //add word align
-    while(((int)((char*)*esp) % 4) != 0) {
+    while(((int)(*esp) % 4) != 0) {
         uint8_t zeroPad = 0; 
         writeToStack(esp, &zeroPad, sizeof(uint8_t));
     }
 
     //add zero argv[final]
     char* nullPtr = NULL;
-    writeToStack(esp, &nullPtr, sizeof(char));
+    writeToStack(esp, &nullPtr, sizeof(char*));
 
     //Add addresses (not sure how to conver addresses to char format) argv[]
     for(int i = index - 1; i >= 0; i--){
@@ -543,6 +543,8 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
     writeToStack(esp, &returnAddr, sizeof(void*));
 
     free(listOfArgs);
+
+    // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: uncomment this to check arg passing
 
     return success; 
 }
