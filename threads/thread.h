@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status {
@@ -16,6 +17,7 @@ enum thread_status {
 /* Thread identifier type.
  * You can redefine this to whatever type you like. */
 typedef int tid_t;
+typedef int pid_t;
 #define TID_ERROR ((tid_t)-1) /* Error value for tid_t. */
 
 /* Thread priorities. */
@@ -97,7 +99,13 @@ struct thread {
 #endif
 
     /* Owned by thread.c. */
-    unsigned magic; /* Detects stack overflow. */
+    unsigned magic; /* Detects stack overflow. */  
+
+    pid_t parent_tid; //need to store the parent pid
+    struct list file_list;
+    int fd; // each process has its own memory - own file descriptor then 
+    struct semaphore thread_dying;
+    struct semaphore thread_dead;
 };
 
 /* If false (default), use round-robin scheduler.
@@ -131,5 +139,9 @@ int thread_get_nice(void);
 void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
+
+bool thread_exists(tid_t tid);
+
+struct thread* return_thread_bytid(tid_t tid);
 
 #endif /* threads/thread.h */

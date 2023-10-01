@@ -101,12 +101,14 @@ thread_init(void)
     lock_init(&tid_lock);
     list_init(&ready_list);
     list_init(&all_list);
+    
 
     /* Set up a thread structure for the running thread. */
     initial_thread = running_thread();
     init_thread(initial_thread, "main", PRI_DEFAULT);
     initial_thread->status = THREAD_RUNNING;
     initial_thread->tid = allocate_tid();
+    
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -186,6 +188,7 @@ thread_create(const char *name, int priority,
     struct switch_threads_frame *sf;
     tid_t tid;
 
+
     ASSERT(function != NULL);
 
     /* Allocate thread. */
@@ -213,6 +216,9 @@ thread_create(const char *name, int priority,
     sf->eip = switch_entry;
     sf->ebp = 0;
 
+    t->parent_tid = thread_tid(); // this is the parent pid
+
+    
     /* Add to run queue. */
     thread_unblock(t);
 
@@ -479,9 +485,17 @@ init_thread(struct thread *t, const char *name, int priority)
     t->priority = priority;
     t->magic = THREAD_MAGIC;
 
+     sema_init(&t->thread_dying, 0);
+     sema_init(&t->thread_dead, 0);
+
     old_level = intr_disable();
     list_push_back(&all_list, &t->allelem);
     intr_set_level(old_level);
+
+    list_init(&t->file_list);
+    t->fd = 2; //stdin and stdout are reserved 
+
+    t->parent_tid = -1; // not parent tid yet 
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -594,6 +608,33 @@ allocate_tid(void)
 
     return tid;
 }
+
+bool thread_exists(tid_t tid) {
+  struct list_elem *e;
+  for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    struct thread *t = list_entry (e, struct thread, allelem);
+    if (t->tid == tid)
+    {
+      return true;
+    }
+  }
+  return false; 
+}
+
+struct thread* return_thread_bytid(tid_t tid) {
+  struct list_elem *e;
+  for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    struct thread *t = list_entry(e, struct thread, allelem);
+    if (t->tid == tid)
+    {
+      return t; 
+    }
+  }
+  return NULL; 
+}
+
 
 /* Offset of `stack' member within `struct thread'.
  * Used by switch.S, which can't figure it out on its own. */

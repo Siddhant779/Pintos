@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
+#include "syscall.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -119,6 +120,7 @@ kill(struct intr_frame *f)
 static void
 page_fault(struct intr_frame *f)
 {
+
     bool not_present; /* True: not-present page, false: writing r/o page. */
     bool write;       /* True: access was write, false: access was read. */
     bool user;        /* True: access by user, false: access by kernel. */
@@ -132,6 +134,11 @@ page_fault(struct intr_frame *f)
      * [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      * (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
+
+    //Set eax and sets the former value into eip
+    int eaxCopy = f->eax;
+    f->eax = 0xffffffff;
+    f->eip = (void *)eaxCopy; // do you need to cast this to void eip is a void pointer
 
     /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */
@@ -153,5 +160,7 @@ page_fault(struct intr_frame *f)
            not_present ? "not present" : "rights violation",
            write ? "writing" : "reading",
            user ? "user" : "kernel");
-    kill(f);
+    //kill(f);
+    syscall_exit(-1); // should it be negative 1???
+    // call sysexit here 
 }

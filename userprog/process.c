@@ -102,10 +102,20 @@ start_process(void *file_name_)
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
 int
-process_wait(tid_t child_tid UNUSED)
+process_wait(tid_t child_tid)
 {
-    // while(true) { } //uncomment this when testing setup_stack
-    return -1;
+    int exit_status = -1;
+    struct thread *cur = thread_current();
+    struct thread *child = return_thread_bytid(child_tid);
+    if(child == NULL) return exit_status;
+    
+    sema_down(&child->thread_dying); //wait for child to die
+    exit_status = child->status; //reap the status
+    // list_remove(&child->elem);
+    //free(child);
+    sema_up(&child->thread_dead); // allow child to continue dying
+
+    return exit_status;
 }
 
 /* Free the current process's resources. */
@@ -114,6 +124,9 @@ process_exit(void)
 {
     struct thread *cur = thread_current();
     uint32_t *pd;
+
+    sema_up(&cur->thread_dying); //get status reaped
+    sema_down(&cur->thread_dead); //wait to continue dying after status gets reaped
 
     /* Destroy the current process's page directory and switch back
      * to the kernel-only page directory. */
@@ -130,6 +143,7 @@ process_exit(void)
         pagedir_activate(NULL);
         pagedir_destroy(pd);
     }
+    
 }
 
 /* Sets up the CPU for running user code in the current
@@ -139,7 +153,6 @@ void
 process_activate(void)
 {
     struct thread *t = thread_current();
-
     /* Activate thread's page tables. */
     pagedir_activate(t->pagedir);
 
@@ -242,6 +255,7 @@ load(const char *file_name, void(**eip) (void), void **esp)
         printf("load: %s: open failed\n", file_name);
         goto done;
     }
+    file_deny_write(file);
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -323,7 +337,7 @@ load(const char *file_name, void(**eip) (void), void **esp)
 
 done:
     /* We arrive here whether the load is successful or not. */
-    file_close(file);
+    //file_close(file); - remove this this is what raymond said 
     return success;
 }
 
