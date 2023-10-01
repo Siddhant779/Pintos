@@ -113,8 +113,8 @@ process_wait(tid_t child_tid)
     
     sema_down(&child->thread_dying); //wait for child to die
     exit_status = child->status; //reap the status
-    // list_remove(&child->elem);
-    //free(child);
+    list_remove(&child->elem);
+    free(child);
     sema_up(&child->thread_dead); // allow child to continue dying
 
     return exit_status;
