@@ -164,3 +164,7 @@ page_fault(struct intr_frame *f)
     syscall_exit(-1); // should it be negative 1???
     // call sysexit here 
 }
+
+void page_fault_handler(struct intr_frame *f) {
+    page_fault(f);
+}
