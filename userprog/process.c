@@ -249,8 +249,15 @@ load(const char *file_name, void(**eip) (void), void **esp)
     }
     process_activate();
 
+    //
+    char *fileCpy;
+    fileCpy = palloc_get_page(0);
+    if (fileCpy == NULL) return TID_ERROR;
+    strlcpy(fileCpy, file_name, PGSIZE);
+    char* extracted_file_name = strtok_r(fileCpy, " ", &fileCpy);
+
     /* Open executable file. */
-    file = filesys_open(file_name);
+    file = filesys_open(extracted_file_name);
     if (file == NULL) {
         printf("load: %s: open failed\n", file_name);
         goto done;

@@ -429,5 +429,5 @@ syscall_handler(struct intr_frame *f UNUSED)
         f->eax = syscall_write(args_v[0], (const void *) args_v[1], (unsigned) args_v[2]);
     }
 
-    thread_exit();
+    // thread_exit();
 }
