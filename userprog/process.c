@@ -24,7 +24,7 @@
 
 
 static thread_func start_process NO_RETURN;
-static bool load(const char *cmdline, void(**eip) (void), void **esp);
+static bool load(const char *cmdline, void(**eip) (void), void **esp, char **token_ptr);
 
 /* Starts a new thread running a user program loaded from
  * FILENAME.  The new thread may be scheduled (and may even exit)
@@ -49,7 +49,8 @@ process_execute(const char *file_name)
         return TID_ERROR;
     }
     strlcpy(fn_copy, file_name, PGSIZE);
-
+    char *token_ptr;
+    file_name = strtok_r((char*)file_name, " ", &token_ptr);
     /* Create a new thread to execute FILE_NAME. */
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
     if (tid == TID_ERROR) {
@@ -66,15 +67,16 @@ start_process(void *file_name_)
     char *file_name = file_name_;
     struct intr_frame if_;
     bool success;
-
     log(L_TRACE, "start_process()");
 
+    char *token_ptr;
+    file_name = strtok_r ((char*)file_name, " ", &token_ptr);
     /* Initialize interrupt frame and load executable. */
     memset(&if_, 0, sizeof if_);
     if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
     if_.cs = SEL_UCSEG;
     if_.eflags = FLAG_IF | FLAG_MBS;
-    success = load(file_name, &if_.eip, &if_.esp);
+    success = load(file_name, &if_.eip, &if_.esp, &token_ptr);
 
     /* If load failed, quit. */
     palloc_free_page(file_name);
@@ -222,7 +224,7 @@ struct Elf32_Phdr {
 #define PF_W 2 /* Writable. */
 #define PF_R 4 /* Readable. */
 
-static bool setup_stack(void **esp, const char *input);
+static bool setup_stack(void **esp, const char *input, char **token_ptr);
 
 static bool validate_segment(const struct Elf32_Phdr *, struct file *);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable);
@@ -232,7 +234,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t 
  * and its initial stack pointer into *ESP.
  * Returns true if successful, false otherwise. */
 bool
-load(const char *file_name, void(**eip) (void), void **esp)
+load(const char *file_name, void(**eip) (void), void **esp, char ** token_ptr)
 {
     log(L_TRACE, "load()");
     struct thread *t = thread_current();
@@ -333,7 +335,7 @@ load(const char *file_name, void(**eip) (void), void **esp)
     }
 
     /* Set up stack. */
-    if (!setup_stack(esp, file_name)) {
+    if (!setup_stack(esp, file_name, token_ptr)) {
         goto done;
     }
 
@@ -474,7 +476,7 @@ static void writeToStack(void **esp, void *obj, int size) {
 /* Create a minimal stack by mapping a zeroed page at the top of
  * user virtual memory. */
 static bool
-setup_stack(void **esp, const char *input) //Keep track of pointers (modify stack pointer)
+setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of pointers (modify stack pointer)
 {
     uint8_t *kpage; //Get user page from memory
     bool success = false;
@@ -508,18 +510,23 @@ setup_stack(void **esp, const char *input) //Keep track of pointers (modify stac
     strlcpy(inputCpy, input, PGSIZE);
     // strlcpy(inputCpy, input, sizeof(char *)); //this seems to be causing some sort of error but it is unknown why or how
     
-
-    char* element = strtok_r(inputCpy, " ", &inputCpy); // there doesnt need to be a _r - (esp points to the pointer that points to stack frame *esp++ to increment)
+    char *element = (char*)input;
     char** listOfArgs = (char**)malloc((index + 1) * (sizeof(char*)));
 
-    //toal length
-    //Loop thru elements
-    while(element != NULL){
+    while(element !=NULL) {
         listOfArgs[index] = element;
         index++;
         listOfArgs = (char**)realloc(listOfArgs, (index + 1) * (sizeof(char*)));
-        element = strtok_r(NULL, " ",&inputCpy);
+        element = strtok_r(NULL, " ", token_ptr);
     }
+    //toal length
+    //Loop thru elements
+    // while(element != NULL){
+    //     listOfArgs[index] = element;
+    //     index++;
+    //     listOfArgs = (char**)realloc(listOfArgs, (index + 1) * (sizeof(char*)));
+    //     element = strtok_r(NULL, " ",&inputCpy);
+    // }
     listOfArgs[index] = NULL; //null append listOfArgs
     //Push to stack (start from the end) argv[]
     for(int i = index - 1; i >= 0; i--){
