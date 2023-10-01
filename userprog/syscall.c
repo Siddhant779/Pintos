@@ -325,9 +325,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     uint32_t signal = * (int *) stackPointer;
     int args_v[3];
-    
-    printf("system call!\n");
-    
+        
     if(signal == SYS_CLOSE) {
         
       get_args_stack(1,f,&args_v[0]);
