@@ -9,7 +9,6 @@
 #include "threads/vaddr.h"
 #include "pagedir.h"
 #include "process.h"
-#include "exception.h"
 
 
 bool sys_lock_init = false;
@@ -312,11 +311,11 @@ syscall_handler(struct intr_frame *f UNUSED)
         // this is where we call the get_user and put_user
         int test = get_user(stackPointer); // read at stack pointer
         if(test == -1 ) { //returns -1 if you can't write 
-             page_fault_handler(f);
+            // page_fault(f);
         }
         else {
             if(put_user(stackPointer, test) == false) { //write that back to stack pointer (make sure you can write back to stack pointer) Not destroying anoything because you are writing what you read
-                 page_fault_handler(f); // does page_fault get called automatically, and if not, how to include it?
+                // page_fault(f); // does page_fault get called automatically, and if not, how to include it?
             }
         }
         
