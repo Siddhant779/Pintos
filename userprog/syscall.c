@@ -98,11 +98,10 @@ void close_file(int fd) {
   struct list_elem *i;
   for (i = list_begin(&t_curr->file_list); i != list_end(&t_curr->file_list); i = list_next(i))
   {
-    struct file_sys *file_pointer = list_entry(i, struct file_sys, elem);
+    struct file_sys *file_pointer = list_entry(i, struct file_sys, elem); //Element itself, contained within file_sys, is what points to the prev and next elem (what makes file_sys actually a list)
     if (file_pointer->fd == fd) {
-      file_close(file_pointer->file);
-    //   list_remove(&file_pointer->elem);
-    //   free(file_pointer);
+      file_close(file_pointer->file); //file is file pointer made by sid
+      list_remove(&file_pointer->elem); //List remove is a function they made. Remove file by passing list elem
     }
   }
 
@@ -149,7 +148,7 @@ syscall_open(const char *file_name) {
   {
     return -1;
   }
-  // need to figure out away to actually add the file - add_file
+  //Add file to list
   struct file_sys *file_sys_pointer = malloc(sizeof(struct file_sys));
   if (file_sys_pointer == NULL)
   {
