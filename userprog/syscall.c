@@ -236,12 +236,12 @@ void valid_ptr(void *pointer) {
 void syscall_exit(int status) {
     struct thread *t_curr = thread_current();
     //DO I NEED TO SEE THE CONDITION OF THE PARENT
-    if(thread_exists(t_curr->tid)) {
-        if(status < 0) {
-            status = -1;
-        }
-        t_curr->status = status;
-    }
+    // if(thread_exists(t_curr->tid)) {
+    //     if(status < 0) {
+    //         status = -1;
+    //     }
+    //     t_curr->status = status;
+    // }
     printf("%s: exit(%d)\n", t_curr->name, status);
     thread_exit();
 }  
