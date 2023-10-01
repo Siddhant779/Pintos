@@ -1,0 +1,5 @@
+need to look into close_remove_file not sure if i need to remove all the ones that are open
+its unsigned for syscall_tell how do i return if its a null what do i do there 
+
+
+may need to close all of the file descriptors - in process exit 
