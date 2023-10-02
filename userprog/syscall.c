@@ -218,11 +218,11 @@ syscall_close(int fd)
 }
 
 pid_t syscall_exec(const char* cmdline) {
-    pid_t pid = process_execute(cmdline);
+  pid_t pid = process_execute(cmdline);
 
     //semaphore stuff here not sure we should discuss this 
     //gets the thread and executes it 
-    return pid;
+  return pid;
 
 }
 void valid_ptr(void *pointer) {

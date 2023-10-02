@@ -108,6 +108,8 @@ struct thread {
     struct semaphore thread_dead;
 
     int exit_status;
+
+    bool waiting;
 };
 
 /* If false (default), use round-robin scheduler.

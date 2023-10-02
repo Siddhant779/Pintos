@@ -110,8 +110,9 @@ process_wait(tid_t child_tid)
     struct thread *cur = thread_current();
     struct thread *child = return_thread_bytid(child_tid);
     if(child == NULL) return exit_status;
-    
+    if(child->waiting == true) return -1;
     sema_down(&child->thread_dying); //wait for child to die
+    child->waiting = true;
     exit_status = child->exit_status; //reap the status
     list_remove(&child->elem);
     //free(child);
