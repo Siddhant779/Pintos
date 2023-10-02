@@ -241,6 +241,7 @@ void syscall_exit(int status) {
     //     }
     //     t_curr->status = status;
     // }
+    t_curr->exit_status = status;
     printf("%s: exit(%d)\n", t_curr->name, status);
     thread_exit();
 }  
