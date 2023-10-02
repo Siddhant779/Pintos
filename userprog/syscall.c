@@ -218,13 +218,6 @@ syscall_close(int fd)
 }
 
 pid_t syscall_exec(const char* cmdline) {
-    //Check if file exists (fix exec missing)
-    struct file* file = filesys_open(cmdline);
-    if(file == NULL){
-      return -1;
-    }
-
-    //Execute file
     pid_t pid = process_execute(cmdline);
 
     //semaphore stuff here not sure we should discuss this 
