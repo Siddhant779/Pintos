@@ -106,6 +106,8 @@ struct thread {
     int fd; // each process has its own memory - own file descriptor then 
     struct semaphore thread_dying;
     struct semaphore thread_dead;
+
+    int exit_status;
 };
 
 /* If false (default), use round-robin scheduler.
