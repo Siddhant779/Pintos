@@ -110,6 +110,8 @@ struct thread {
     int exit_status;
 
     bool waiting;
+
+    struct file* file;
 };
 
 /* If false (default), use round-robin scheduler.
