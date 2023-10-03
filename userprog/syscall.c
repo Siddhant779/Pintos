@@ -99,9 +99,14 @@ void close_file(int fd) {
   for (i = list_begin(&t_curr->file_list); i != list_end(&t_curr->file_list); i = list_next(i))
   {
     struct file_sys *file_pointer = list_entry(i, struct file_sys, elem); //Element itself, contained within file_sys, is what points to the prev and next elem (what makes file_sys actually a list)
+    //lock_acquire(file_pointer->file);
     if (file_pointer->fd == fd) {
+      //lock_release(file_pointer->file);
       file_close(file_pointer->file); //file is file pointer made by sid
       list_remove(&file_pointer->elem); //List remove is a function they made. Remove file by passing list elem
+    }
+    else{
+      //lock_release(file_pointer->file);
     }
   }
 
@@ -146,6 +151,7 @@ syscall_open(const char *file_name) {
   struct file *file_pointer = filesys_open(file_name); // from filesys.h
   if (file_pointer == NULL)
   {
+    lock_release(&sys_lock);
     return -1;
   }
   //Add file to list

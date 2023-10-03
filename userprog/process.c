@@ -19,6 +19,8 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "userprog/tss.h"
+#include "syscall.h"
+
 
 #define LOGGING_LEVEL 6
 
@@ -51,6 +53,14 @@ process_execute(const char *file_name)
     strlcpy(fn_copy, file_name, PGSIZE);
     char *token_ptr;
     file_name = strtok_r((char*)file_name, " ", &token_ptr);
+
+    //check here if file_name exists in the directory, if not return -1
+    struct dir *dir = dir_open_root();
+    struct inode *inode = NULL;
+    if (dir != NULL && !dir_lookup(dir, file_name, &inode)) {
+        return -1;
+    }
+
     /* Create a new thread to execute FILE_NAME. */
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
     if (tid == TID_ERROR) {
@@ -128,9 +138,11 @@ process_exit(void)
     struct thread *cur = thread_current();
     uint32_t *pd;
 
+    lock_acquire(&sys_lock);
+    file_close(cur->file);
+    lock_release(&sys_lock);
     sema_up(&cur->thread_dying); //get status reaped
     sema_down(&cur->thread_dead); //wait to continue dying after status gets reaped
-
     /* Destroy the current process's page directory and switch back
      * to the kernel-only page directory. */
     pd = cur->pagedir;
@@ -266,6 +278,7 @@ load(const char *file_name, void(**eip) (void), void **esp, char ** token_ptr)
         goto done;
     }
     file_deny_write(file);
+    t->file = file;
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -347,7 +360,7 @@ load(const char *file_name, void(**eip) (void), void **esp, char ** token_ptr)
 
 done:
     /* We arrive here whether the load is successful or not. */
-    //file_close(file); - remove this this is what raymond said 
+    //file_close(file); //- remove this this is what raymond said 
     return success;
 }
 
