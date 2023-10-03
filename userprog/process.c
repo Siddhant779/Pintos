@@ -53,6 +53,14 @@ process_execute(const char *file_name)
     strlcpy(fn_copy, file_name, PGSIZE);
     char *token_ptr;
     file_name = strtok_r((char*)file_name, " ", &token_ptr);
+
+    //check here if file_name exists in the directory, if not return -1
+    struct dir *dir = dir_open_root();
+    struct inode *inode = NULL;
+    if (dir != NULL && !dir_lookup(dir, file_name, &inode)) {
+        return -1;
+    }
+
     /* Create a new thread to execute FILE_NAME. */
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
     if (tid == TID_ERROR) {
