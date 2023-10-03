@@ -68,6 +68,8 @@ The shell offers another layer of abstraction between the user and the kernel. I
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
 
+File descriptors are indexes to a table of file of pointers. Processes have separate memory addresses (unless you specifically tell them to share). Therefore, each process would likely have unique file descriptors for the files.
+
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
