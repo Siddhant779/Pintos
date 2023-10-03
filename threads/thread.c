@@ -487,6 +487,7 @@ init_thread(struct thread *t, const char *name, int priority)
 
     sema_init(&t->thread_dying, 0);
     sema_init(&t->thread_dead, 0);
+    sema_init(&t->thread_false_start, 0);
     t->waiting = false;
 
     old_level = intr_disable();

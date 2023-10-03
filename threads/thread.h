@@ -107,6 +107,8 @@ struct thread {
     struct semaphore thread_dying;
     struct semaphore thread_dead;
 
+    struct semaphore thread_false_start;
+    
     int exit_status;
 
     bool waiting;

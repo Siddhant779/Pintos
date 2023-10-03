@@ -63,6 +63,7 @@ process_execute(const char *file_name)
 
     /* Create a new thread to execute FILE_NAME. */
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
+    sema_down(&thread_current()->thread_false_start);// some type of 
     if (tid == TID_ERROR) {
         palloc_free_page(fn_copy);
     }
@@ -88,6 +89,8 @@ start_process(void *file_name_)
     if_.eflags = FLAG_IF | FLAG_MBS;
     success = load(file_name, &if_.eip, &if_.esp, &token_ptr);
 
+    struct thread* parent_proc = return_thread_bytid(thread_current()->parent_tid);
+    sema_up(&parent_proc->thread_false_start);
     /* If load failed, quit. */
     palloc_free_page(file_name);
     if (!success) {
