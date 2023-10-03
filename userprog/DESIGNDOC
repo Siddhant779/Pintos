@@ -36,6 +36,12 @@ FirstName LastName <email@domain.example>
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+The setup_stack function will first create and add to an array of char strings (char** listOfArgs).
+For every part of the setup_stack process (argv[], word align, argc, and return), the algorithm will add the element to memory using writeToStack().
+This contains the loop to first write every string to stack before using another loop to add word aligns. The algorithm then adds 
+the last argv (which is zero) before another loop adds each argv address. Finally, the function adds the argc and return address.
+
+We avoid overflowing the stack page by making sure palloc_get_page() returns a free page where we can write the stack values to.
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
