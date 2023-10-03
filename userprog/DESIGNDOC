@@ -36,19 +36,24 @@ FirstName LastName <email@domain.example>
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
-The setup_stack function will first create and add to an array of char strings (char** listOfArgs).
-For every part of the setup_stack process (argv[], word align, argc, and return), the algorithm will add the element to memory using writeToStack().
-This contains the loop to first write every string to stack before using another loop to add word aligns. The algorithm then adds 
-the last argv (which is zero) before another loop adds each argv address. Finally, the function adds the argc and return address.
+The setup_stack function will first create and add to an array of char strings (char** listOfArgs). For every part of the setup_stack process (argv[], word align, argc, and return), the algorithm will add the element to memory using writeToStack(). This contains the loop to first write every string to stack before using another loop to add word aligns. The algorithm then adds the last argv (which is zero) before another loop adds each argv address. Finally, the function adds the argc and return address.
 
 We avoid overflowing the stack page by making sure palloc_get_page() returns a free page where we can write the stack values to.
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+We use strtok_r() since it is thread safe. Multiple threads can call on it without having issues pop up.
+
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+The shell offers another layer of abstraction between the user and the kernel. It is basically a userprogram that interacts with the kernel. By having the shell handle the commands and then make a system call to the system, more freedom and flexibility is given to the users.
+
+1) You can pick what shell you what to use with the kernel. Each shell can parse commands in a different way. Therefore having this step interface commands to system calls means that you have the flexibility to more easily determine how you want to parse commands to system calls.
+
+2) Usually, you have to be alot more careful when programming at kernel level. Usually when user programs (including the shell) goes wrong, you or the Kernel can kill it. However, when the kernel goes wrong, it can mess up your filesystem or leave the system in an inconsistent state which makes it hard to reboot.
 
 			     SYSTEM CALLS
 			     ============
