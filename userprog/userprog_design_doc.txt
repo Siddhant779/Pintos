@@ -204,8 +204,10 @@ looking within pages
 
 The wait signal calls process_wait(tid_t child_tid) in process.c, which establishes a two way handshake with process_exit(). This function checks the status of the
 child first. If child is null, it returns -1, if child is already waiting, it also returns -1. If those previous conditions aren't true, it will call sema down
-on the child's thread_dying semaphore, which waits for child to call sema up on the semaphore in it's process_exit(). Then, it will reap the child's status
-before calling sema up on the child's thread_dead semaphore. This tells the child the the parent finished reaping the status, which will then decllocate the child.
+on the child's thread_dying semaphore, which waits for child to call sema up on the semaphore in it's process_exit(). In the child's process_exit() function, the child will 
+call sema up on its dying semaphore, which notifies the parent and also calls sema down on the thread_dead semaphore which notifies the child that it has been reaped.
+When process_wait is notified on the thread_dying semaphore, it will reap the child's status before calling sema up on the child's thread_dead semaphore. This will then notify
+the child so that it may continue its process_exit() and get deallocated.
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
