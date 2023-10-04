@@ -10,6 +10,7 @@
 
 Saumya Jain saumyajain@utexas.edu
 Siddhant Pandit panditsiddhant.sp@utexas.edu
+Siyuan (Tim) Chen timchenut567@utexas.edu
 FirstName LastName <email@domain.example>
 
 ---- PRELIMINARIES ----
