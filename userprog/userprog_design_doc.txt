@@ -245,6 +245,12 @@ the child so that it may continue its process_exit() and get deallocated.
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 
+For our file descriptors, we had a variable in each process that incremented a file_desrciptor value that would determine the value of the next file descriptor used in 
+the process using a filesys struct. The advantage of this design is its ease of use as there is no need to add an additional function for getting a new file descriptor,
+which requires resources like locks and can lead to race conditions when getting file descriptors in multiple processes. Furthermore the usage of a struct allows for 
+easier implementation for file descriptors as it provide an easy to use list of all files associated to a process. The disadvantage of this design is that it takes up 
+more memory resources as there are extra variables for each active process.
+
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
 
