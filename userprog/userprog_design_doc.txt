@@ -8,9 +8,11 @@
 
 >> Fill in the names and email addresses of your group members.
 
-Saumya Jain saumyajain@utexas.edu
-Siddhant Pandit panditsiddhant.sp@utexas.edu
 Siyuan (Tim) Chen timchenut567@utexas.edu
+Saumya Jain saumyajain@utexas.edu
+David Li davidli216@utexas.edu
+Siddhant Pandit panditsiddhant.sp@utexas.edu
+
 FirstName LastName <email@domain.example>
 
 ---- PRELIMINARIES ----
