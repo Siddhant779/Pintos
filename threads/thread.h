@@ -113,7 +113,7 @@ struct thread {
 
     bool waiting;
 
-    struct file* file;
+    struct file *file;
 };
 
 /* If false (default), use round-robin scheduler.

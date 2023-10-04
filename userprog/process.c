@@ -536,14 +536,6 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
         listOfArgs = (char**)realloc(listOfArgs, (index + 1) * (sizeof(char*)));
         element = strtok_r(NULL, " ", token_ptr);
     }
-    //toal length
-    //Loop thru elements
-    // while(element != NULL){
-    //     listOfArgs[index] = element;
-    //     index++;
-    //     listOfArgs = (char**)realloc(listOfArgs, (index + 1) * (sizeof(char*)));
-    //     element = strtok_r(NULL, " ",&inputCpy);
-    // }
     listOfArgs[index] = NULL; //null append listOfArgs
     //Push to stack (start from the end) argv[]
     for(int i = index - 1; i >= 0; i--){
