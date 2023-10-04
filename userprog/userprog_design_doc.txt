@@ -8,8 +8,9 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@utexas.edu>
-FirstName LastName <email@utexas.edu>
+Saumya Jain saumyajain@utexas.edu
+Siddhant Pandit panditsiddhant.sp@utexas.edu
+FirstName LastName <email@domain.example>
 
 ---- PRELIMINARIES ----
 
@@ -28,15 +29,42 @@ FirstName LastName <email@utexas.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+Nothing new or changed was made in terms of struct, struct member, or varaibles. 
+The only thing that was changed was the function headers including 
+
+`bool load()` and `bool setup_stack` including a new vairiable called `char **token_ptr`.
+In start_process function we seperate the file name and arguments; in this case token_ptr
+is a pointer to the start of the arguments which is passed from load to setup_stack.
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+The setup_stack function will first create and add to an array of char 
+strings (char** listOfArgs). For every part of the setup_stack process 
+(argv[], word align, argc, and return), the algorithm will add the 
+element to memory using writeToStack(). This contains the loop to first 
+write every string to stack before using another loop to add word 
+aligns. The algorithm then adds the last argv (which is zero) before 
+another loop adds each argv address. Finally, the function adds the argc 
+and return address. 
+We were able to get argv[] in the right order by
+starting at the end of our array `listOfArgs` and pushing each element 
+into the stack starting at the end. Thus the last element of argv will
+be at the highest address. 
+Moreover, We avoid overflowing the stack page by making sure 
+palloc_get_page() returns a free page where we can write the stack 
+values to.
+
+
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
+
+We use strtok_r() since it is thread safe. Multiple threads can call
+on it without having issues pop up.
 
                              SYSTEM CALLS
                              ============
@@ -47,9 +75,89 @@ FirstName LastName <email@utexas.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+typedef int pid_t - this is for storing the value of parenttid inside 
+the struct thread
+
+added `
+struct file_sys {
+    struct list_elem elem; // so i can go through the files for file_sys 
+    struct file *file; //pointing to the actual file 
+    int fd; // for file descriptor
+
+};
+`
+this struct was used in functions such as close_file and open_file where 
+fd was the input to the function. It linked the file pointer to a specific
+fd which was important to functions such as those
+
+struct lock sys_lock - used as a lock for when a file was being accessed,
+modified, closed, etc. Used in both syscall.c and process.c. Only supports
+one process modifying a file
+
+#define STD_INPUT 0
+#define STD_OUTPUT 1
+- was used to describe the fd that was responsible for std input and std 
+output
+
+pid_t parent_tid - storing the parent pid into the the process
+
+struct list file_list - storing a list of file_sys struct - there is a different
+list for each process
+
+int fd - used as a counter for the next available file descriptor value; started at
+2 since stdin and stdout were at 0 and 1 respectfully.
+
+struct semaphore thread_dying - part of the two - way handshake between the parent
+and child process. Parent does a sema_down in process_wait to wait for the child 
+process to die in process_exit where there is a sema_up
+
+struct semaphore thread_dead -  part of the two - way handshake between the parent
+and child process. Child does a sema_down in process_exit to wait for the parent to
+reeap the child process in process_wait where there is a sema_up
+
+struct semaphore thread_false_start - used for another race condition where
+process_execute is blocked until it knows that the ELF bin has been succesfully 
+uploaded. Makes sure that the thread starts before it actually executes - sema down in 
+process_execute and sema up in start_process
+
+int exit_status - used as a way to let process_wait know what the exit status is for a 
+process
+
+bool waiting - used as a way for to let the kernel know that the process is already waiting
+so that the process doesn't have to wait again.
+
+struct file *file - used for storing the executable file for the process. it is closed
+when the process is about to exit.
+
+`
+    pid_t parent_tid; //need to store the parent pid
+    struct list file_list;
+    int fd; // each process has its own memory - own file descriptor then 
+    struct semaphore thread_dying;
+    struct semaphore thread_dead;
+
+    struct semaphore thread_false_start;
+    
+    int exit_status;
+
+    bool waiting;
+
+    struct file *file;
+`
+
+are all things that have been added to the struct thread 
+
+
+
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+
+File descriptors are indexes to a table of file of pointers. Processes have 
+separate memory addresses (unless you specifically tell them to share).
+Therefore, each process would likely have unique file descriptors for the 
+files.
 
 ---- ALGORITHMS ----
 
