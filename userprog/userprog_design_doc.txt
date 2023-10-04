@@ -13,8 +13,6 @@ Saumya Jain saumyajain@utexas.edu
 David Li davidli216@utexas.edu
 Siddhant Pandit panditsiddhant.sp@utexas.edu
 
-FirstName LastName <email@domain.example>
-
 ---- PRELIMINARIES ----
 
 >> If you have any preliminary comments on your submission, notes for the
@@ -247,6 +245,8 @@ before calling sema up on the child's thread_dead semaphore. This tells the chil
 
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+
+We did not change the tid to pid mapping implementation and used identity mapping.
 
                            SURVEY QUESTIONS
                            ================
