@@ -164,6 +164,11 @@ files.
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
 
+syscall_read() first checks if the read size is greater than zero and if the fd is STD_INPUT, which indicates that the code should read from console. 
+If those arent true, the code will then get the lock for file access (lock_acquire(&sys_lock);). The code then tries to find the file from the file pointer
+via get_file_pointer(fd). If that fails, this returns -1 and releases the lock. If it works, it obtains the size via file_read(file_pointer, buffer, size),
+and releases the lock before returning the size.
+
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
 >> and the greatest possible number of inspections of the page table
@@ -171,8 +176,24 @@ files.
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
+Granularity: If an address of a page is valid, all of the addresses are valid. Pages are aligned (Page number starts at 12th bit and offset is within the 12 bits. 
+Add page starts will be at multiple of 4k bits, last 12 bits zero). Pagedir will return the start of a page. 
+
+In order to find an available page that can be mapped, the code will need to look through the address space until it finds a page that has not yet be mapped. 
+The last number of times this can happen is 1 (map page first try). The most number of times is the the number of pages that can be stored total (as this code 
+searches through every page).
+
+For system calls that only copy a small amount of data (2 bytes). This means that you likely don't have to allocate a new page to store this information. 
+This could likely reduce the number of page searches needed to find a page to store this information (might not need to assign a new page). However, this will require 
+looking within pages
+
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+The wait signal calls process_wait(tid_t child_tid) in process.c, which establishes a two way handshake with process_exit(). This function checks the status of the
+child first. If child is null, it returns -1, if child is already waiting, it also returns -1. If those previous conditions aren't true, it will call sema down
+on the child's thread_dying semaphore, which waits for child to call sema up on the semaphore in it's process_exit(). Then, it will reap the child's status
+before calling sema up on the child's thread_dead semaphore. This tells the child the the parent finished reaping the status, which will then decllocate the child.
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
