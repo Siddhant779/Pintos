@@ -307,6 +307,9 @@ After C exits:
 If C has already exited, 'sema_up(&child->thread_dead)' would have reaped its resources and it can continue the termination process without any special handling.
 This case is also part of our two way handshake that was discussed in B7  
 
+For all these cases, our two way handhsake is responsible for making sure that the child is freed as soon as the parent acknowledges the status of the child. 
+Along with this since each thread struct has their own struct having multiple threads does not affect how our program runs
+
 ---- RATIONALE ----
 
 >> B9: Why did you choose to implement access to user memory from the
