@@ -172,10 +172,21 @@ thread struct.
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
 
-syscall_read() first checks if the read size is greater than zero and if the fd is STD_INPUT, which indicates that the code should read from console. 
-If those arent true, the code will then get the lock for file access (lock_acquire(&sys_lock);). The code then tries to find the file from the file pointer
-via get_file_pointer(fd). If that fails, this returns -1 and releases the lock. If it works, it obtains the size via file_read(file_pointer, buffer, size),
-and releases the lock before returning the size.
+In both syscall read and write we pop off the three arguments from the stack - making sure that the pointer for each variable is write including the
+buffer pointers in both cases. If the buffer's user virtual address is unmapped or the pointer isnt valid then syscall_exit(-1) is called. Read and write
+syscalls now differ here
+
+Reading user data: 
+syscall_read() first checks if the read size is greater than zero and if the fd is STD_INPUT, which indicates that the code should read from console using 
+input_getc(). If those arent true, the code will then get the lock for file access (lock_acquire(&sys_lock);). The code then tries to find the file from the file pointer
+via get_file_pointer(fd). If that fails, this releases the lock and returns -1. If it works, it obtains the size via file_read(file_pointer, buffer, size),
+and releases the lock before returning the size which is later returned by eax .
+
+Writing user data: 
+syscall_write() does something similar as well. It first checks if the write size is greater than zero - if its not it returns size. It then checks if the fd
+is STD_OUTPUT which means that we are writing to the console using putbuf(). If those conditions are not true, the code will then get the lock for file access using
+sys_lock and get the fie pointer via get_file_pointer(fd). If that fails, this releases the lock and returns -1. If it works, it obtains the size written by
+file_write(file_pointer, buffer, size) and releases the lock before returning the size which is later returned by eax.
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
