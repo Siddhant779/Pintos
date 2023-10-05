@@ -257,12 +257,37 @@ is SYS_READ and the buffer that is passed in is not a valid pointer checked by v
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
 
+In our code, the process_execute() function ensures that the new executable has completed loading before returning to the caller. It achieves this through the use of
+semaphores, child process signaling, and error handling. Semaphore - As a new process is created with process_execute(), it initializes a semaphore thread_false_start
+in the new thread. This semaphore is a synchronization mechanism where the parent thread will wait on the semaphore until the child process has successfully loaded the 
+executable. Child Process Signaling - In the start_process() function, after attempting to load the executable, the child process signals the parent thread that it has 
+completed loading and is ready to execute and the thread_false_start semaphore is released. 
+
+sema_up(&parent_proc->thread_false_start);
+
+This line ensures the parent thread is unblocked, allowing it to continue execution. 
+Error Handling - There is a -1 returned if the loading fails and the parent thread can check the return value to identify if the execution of the new process failed. 
+
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
 >> calls wait(C) before C exits?  After C exits?  How do you ensure
 >> that all resources are freed in each case?  How about when P
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
+
+When P calls wait(C) before C exits:
+P immediately gets the exit status without waiting. Since C has already exited the parent process directly retrieves the exit status and is able to free any associated
+resources without the need for synchronization. 
+
+After C exits: 
+P can call process_wait() to obtain the exit status of C, ensuring that C's resources are reaped and the thread structure is removed from the list of child processes. 
+
+When P terminates without waiting before C exits:
+There can possibly be orphaned child proesses. To handle this we kept track of child processes even after their parents terminate. When the child process exits, the 
+kernel ensures the resources are properly freed. 
+
+After C exits: 
+If C has already exited, 'sema_up(&child->thread_dead)' would have reaped its resources and it can continue the termination process without any special handling. 
 
 ---- RATIONALE ----
 
