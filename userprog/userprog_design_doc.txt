@@ -220,6 +220,9 @@ call sema up on its dying semaphore, which notifies the parent and also calls se
 When process_wait is notified on the thread_dying semaphore, it will reap the child's status before calling sema up on the child's thread_dead semaphore. This will then notify
 the child so that it may continue its process_exit() and get deallocated.
 
+We are able to get the struct thread* of the child by using a function we wrote called return_thread_bytid() - where the input is child_tid and the output is struct
+*thread. - wrote this funciton in thread.c 
+
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
 >> process to be terminated.  System calls are fraught with such
