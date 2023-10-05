@@ -282,6 +282,7 @@ sema_up(&parent_proc->thread_false_start);
 
 This line ensures the parent thread is unblocked, allowing it to continue execution. 
 Error Handling - There is a -1 returned if the loading fails and the parent thread can check the return value to identify if the execution of the new process failed. 
+Thus our code ensures that the thread actually starts before it executes.
 
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
@@ -291,18 +292,20 @@ Error Handling - There is a -1 returned if the loading fails and the parent thre
 >> there any special cases?
 
 When P calls wait(C) before C exits:
-P immediately gets the exit status without waiting. Since C has already exited the parent process directly retrieves the exit status and is able to free any associated
-resources without the need for synchronization. 
+P immediately gets the exit status without waiting. This is becuase our function return_thread_bytid returns null for child as it couldnt find a thread with that tid. 
+Since C has already exited the parent process directly retrieves the exit status and is able to free any associated resources without the need for synchronization. 
 
 After C exits: 
-P can call process_wait() to obtain the exit status of C, ensuring that C's resources are reaped and the thread structure is removed from the list of child processes. 
+P can call process_wait() to obtain the exit status of C, ensuring that C's resources are reaped and the thread structure is removed from the list of child processes.
+This follows the normal two way handshake that was discussed in B7 
 
 When P terminates without waiting before C exits:
 There can possibly be orphaned child proesses. To handle this we kept track of child processes even after their parents terminate. When the child process exits, the 
 kernel ensures the resources are properly freed. 
 
 After C exits: 
-If C has already exited, 'sema_up(&child->thread_dead)' would have reaped its resources and it can continue the termination process without any special handling. 
+If C has already exited, 'sema_up(&child->thread_dead)' would have reaped its resources and it can continue the termination process without any special handling.
+This case is also part of our two way handshake that was discussed in B7  
 
 ---- RATIONALE ----
 
