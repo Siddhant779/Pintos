@@ -475,6 +475,4 @@ syscall_handler(struct intr_frame *f UNUSED)
         //returns the number of bytes written into eax 
         f->eax = syscall_write(args_v[0], (const void *) args_v[1], (unsigned) args_v[2]);
     }
-
-    // thread_exit();
 }
