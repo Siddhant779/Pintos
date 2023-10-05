@@ -199,12 +199,16 @@ Granularity: If an address of a page is valid, all of the addresses are valid. P
 Add page starts will be at multiple of 4k bits, last 12 bits zero). Pagedir will return the start of a page. 
 
 In order to find an available page that can be mapped, the code will need to look through the address space until it finds a page that has not yet be mapped. 
-The last number of times this can happen is 1 (map page first try). The most number of times is the the number of pages that can be stored total (as this code 
-searches through every page).
+The last number of times this can happen is 1 (map page first try). This is the case where the segment size in memory is greater than or equa to the segment 
+size in files. The most number of times is the the number of pages that can be stored total (as this code searches through every page). This could end up being
+4096 inspections where each segment from pagedir_get_page is one byte in size - you need 4096 inspections for 4096 bytes.
 
-For system calls that only copy a small amount of data (2 bytes). This means that you likely don't have to allocate a new page to store this information. 
-This could likely reduce the number of page searches needed to find a page to store this information (might not need to assign a new page). However, this will require 
-looking within pages
+For system calls that only copies a small amount of data (2 bytes), the least amount of inspections would be 1 and the most would be 2. This follows the same
+idea as above. 
+
+In terms of improvement, we could try and store related segments of data into the same page. So for instance, we could store two segments with a size of 4 each
+in a page size of 8 bytes. This would result in fewer inspections of the page table and lead us closer to having the best case scenario for inspections (lowest
+number which is 1).
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
