@@ -162,8 +162,10 @@ are all things that have been added to the struct thread
 
 File descriptors are indexes to a table of file of pointers. Processes have 
 separate memory addresses (unless you specifically tell them to share).
-Therefore, each process would likely have unique file descriptors for the 
-files.
+Therefore, each process does have unique file descriptors for the files. 
+We implemented it so that each process has its own file descriptor counter
+which is incremented each time a file is opened- called int fd within the
+thread struct.
 
 ---- ALGORITHMS ----
 
