@@ -242,6 +242,7 @@ then that means that UADDR is unmapped - we call a sys_exit(-1) in this case. Al
 address. Along with this at the begining of each syscall at the top of the handler we call two functions get_user() as well as put_user() which dereferences the
 pointer by reading and writing to the value - if its not able to pass any of these two functions then a page_fault() is called with the handler. Lastly we make
 sure that the pointer is above PHYS_BASE. 
+
 Moreover whenever we are popping out values from the stack for system calls such as the write system call we have a function called get_args_stack which is called
 to get the values. Within that function, we call valid_ptr() which makes sure that the address is valid before getting the value by calling syscall_exit(-1) if
 pointer is less than USER_VADDR_BOTTOM and if the address is not in user virtual address >= PHYS_BASE. By having one function called valid_ptr() that checks to
@@ -249,13 +250,20 @@ make sure that the address is valid we are able to avoid obscuring the primary f
 is right. We use valid_ptr to not only check whether the the values from the stack were right but also if the individual pointers within the array were right. For
 instance in SYS_READ the second argument is a char* pointer to a buffer. Within the else if statement we go through the buffer and call valid_ptr to make sure that
 the pointer doesn't have a bad value. 
+
 By calling syscall_exit(-1) for bad pointer values we are calling thread_exit() which is responsible for descheduling the thread and destroying it. This also means
 calling the process_exit() function which is responsible for destorying the current process's page directory, closing the executable file, freeing up allocated
 resources, etc. 
+
 An example of this is if the user passes a pointer that is null or a pointer to the kernel virtual address space then syscall_exit(-1) is called which will follow
 a pattern that we discussed above. On the other hand if its a pointer to an unmapped part of virtual memory then a page fault is called where syscall_exit(-1) is
 eventually called after setting eax to 0xffffffff and copies its former value into eip. If the call is able to pass all these tests and for instance if the signal
 is SYS_READ and the buffer that is passed in is not a valid pointer checked by valid_ptr() function then syscall_exit(-1) is called.
+
+Furthermore, we also used distinct variable names and split up specific syscalls into their individual functions seperate from the main syscall handler. This allows
+for easier distinction between the various syscalls and allows for clearer code objectives within the syscall handler. To better handle resources and resource allocations,
+each individual syscall function handles its own resource allocation to avoid confusion on when and where certain resources are allocated and allow for easier cleanup. 
+This is exemplified in our general syscall handler structure, which first detects which specific syscall is being called and then runs its corresponding function.
 
 ---- SYNCHRONIZATION ----
 
