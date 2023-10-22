@@ -12,25 +12,26 @@
  * 6. Update SPT of process that just obtained new frame
  *     - should be in memory */
 void *get_frame(struct SPTE *new_page) {
-    size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false);
+    size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false); // 1
     if(idx == BITMAP_ERROR) {
-        idx = evict_frame(); // if no frame is free, then evict a frame
+        idx = evict_frame(); // 2
     }
     
-    struct FTE res = frame_table[idx];
-    struct SPTE *old_page = res.page_entry; // old page associated to the frame
-    // Get SPTE pointer for the new page
+    struct FTE *f = &frame_table[idx]; // frame you wish to store the new page in
+    struct SPTE *old_page = f->page_entry; // SPTE of old page associated to the frame
+    struct SPTE *new_page = NULL; // SPTE of new page to be added to frame, not sure where we get this from
 
-    // TODO: UPDATE THE SPTE OF THE OLD PAGE ASSOCIATED TO THE FRAME. NOT SURE HOW PAGE IS BEING IMPLEMENTED SO SKIPPING THIS STEP FOR NOW
+    f->page_entry = new_page; 
+    old_page->kpage = NULL; 
+    new_page->kpage = f->frame;
     
-
-
+    return f->frame;
 }
 
 void frame_init() {
     frame_map = bitmap_create(FRAME_NUM); // create 367 bit bitmap to keep track of frames. TODO: destroy the bitmap when done
     for(int i = 0; i < FRAME_NUM; i++) {
-        frame_table[i].frame_page = palloc_get_page(PAL_USER); // associate a user memory page to the frame
+        frame_table[i].frame = palloc_get_page(PAL_USER); // associate a user memory page to the frame
         list_init(&(frame_table[i].processes)); 
         frame_table[i].page_entry = NULL;
     }
@@ -45,15 +46,17 @@ int evict_frame() {
     //loop though page table in a circular fashion
     do {
         // honestly not sure how the pagedir functions work, this is just how I think they work
-        if(!pagedir_is_dirty(frame_table[i].frame_page, frame_table[i].page_entry->kpage)) {
-            if(!pagedir_is_accessed(frame_table[i].frame_page, frame_table[i].page_entry->kpage)) {
+        if(!pagedir_is_dirty(frame_table[i].frame, frame_table[i].page_entry->kpage)) {
+            if(!pagedir_is_accessed(frame_table[i].frame, frame_table[i].page_entry->kpage)) {
                 evicted = i; // if page was neither accessed nor dirty, evict it
                 break;
             } else {
                 clean = i; // if page is not dirty then consider it for eviction
             }
         }
-        
+        if(!pagedir_is_dirty(frame_table[i].frame, frame_table[i].page_entry->kpage)) {
+            clean = i;
+        }
         i = (i + 1) % FRAME_NUM;
     } while(i != evict_start);
     
