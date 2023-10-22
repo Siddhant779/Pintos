@@ -1,9 +1,30 @@
 #include "frame.h"
 #include "pagedir.h"
 
-struct frame *get_frame() {
-    // look through bitmap for a value = 0 and return it
-    // if no such value exists, run eviction algorithm
+/* Frame logic (add locks here)
+ * Input: pointer to SPTE that you wish to associate to a frame
+ * if frame is available, allocate to process that requested (link SPTE)
+ * 2. If no empty frame, evict a frame (clock algo)
+ * 3. Frame allocated to process that requested a frame
+ * 4. updates SPT/SPTE of process that use to own the frame
+ *     - SPTE should be located in disk or swap, not memory
+ * 5. install_page()
+ * 6. Update SPT of process that just obtained new frame
+ *     - should be in memory */
+void *get_frame(struct SPTE *new_page) {
+    size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false);
+    if(idx == BITMAP_ERROR) {
+        idx = evict_frame(); // if no frame is free, then evict a frame
+    }
+    
+    struct FTE res = frame_table[idx];
+    struct SPTE *old_page = res.page_entry; // old page associated to the frame
+    // Get SPTE pointer for the new page
+
+    // TODO: UPDATE THE SPTE OF THE OLD PAGE ASSOCIATED TO THE FRAME. NOT SURE HOW PAGE IS BEING IMPLEMENTED SO SKIPPING THIS STEP FOR NOW
+    
+
+
 }
 
 void frame_init() {
@@ -23,8 +44,16 @@ int evict_frame() {
 
     //loop though page table in a circular fashion
     do {
-        // TODO: f SPTE corresponding to frame was accessed and dirty, set evicted = i and break
-        // TODO: else if dirty but not accessed, set clean = i
+        // honestly not sure how the pagedir functions work, this is just how I think they work
+        if(!pagedir_is_dirty(frame_table[i].frame_page, frame_table[i].page_entry->kpage)) {
+            if(!pagedir_is_accessed(frame_table[i].frame_page, frame_table[i].page_entry->kpage)) {
+                evicted = i; // if page was neither accessed nor dirty, evict it
+                break;
+            } else {
+                clean = i; // if page is not dirty then consider it for eviction
+            }
+        }
+        
         i = (i + 1) % FRAME_NUM;
     } while(i != evict_start);
     
