@@ -262,6 +262,9 @@ load(const char *file_name, void(**eip) (void), void **esp, char ** token_ptr)
 
     /* Allocate and activate page directory. */
     t->pagedir = pagedir_create();
+    //initializing the SPT 
+    t->SuppT = SPT_init();
+
     if (t->pagedir == NULL) {
         goto done;
     }
@@ -478,6 +481,12 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         // }
 
         /* Advance. */
+       struct thread *current = thread_current();
+        bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, read_bytes, zero_bytes, writable);
+        if(condition_install == false) {
+            return false;
+        }
+        
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;

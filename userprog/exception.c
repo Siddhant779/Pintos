@@ -6,6 +6,8 @@
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
 #include "syscall.h"
+#include "threads/vaddr.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -134,6 +136,14 @@ page_fault(struct intr_frame *f)
      * [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      * (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
+    //this is the VM part 
+
+    struct thread *curr = thread_current();
+    void *fault_page = (void *)pg_round_down(fault_addr);
+
+    if(not_present) {
+        load_page(curr->SuppT, curr->pagedir, fault_page);
+    }
 
     //Set eax and sets the former value into eip
     int eaxCopy = f->eax;

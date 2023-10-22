@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "synch.h"
 #include "hash.h"
+#include "vm/page.h"
 
 /* States in a thread's life cycle. */
 enum thread_status {
@@ -117,7 +118,7 @@ struct thread {
     struct file *file;
 
     //Need 2 structs, one is hash and one is hash elem
-    struct hash SPT;
+    struct SPT *SuppT;
     
 };
 
