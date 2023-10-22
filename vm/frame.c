@@ -18,13 +18,10 @@ void *get_frame(struct SPTE *new_page) {
     }
     
     struct FTE *f = &frame_table[idx]; // frame you wish to store the new page in
-    struct SPTE *old_page = f->page_entry; // SPTE of old page associated to the frame
     struct SPTE *new_page = NULL; // SPTE of new page to be added to frame, not sure where we get this from
 
-    f->page_entry = new_page; 
-    old_page->kpage = NULL; 
+    f->page_entry = new_page;
     new_page->kpage = f->frame;
-    
     return f->frame;
 }
 
@@ -54,9 +51,6 @@ int evict_frame() {
                 clean = i; // if page is not dirty then consider it for eviction
             }
         }
-        if(!pagedir_is_dirty(frame_table[i].frame, frame_table[i].page_entry->kpage)) {
-            clean = i;
-        }
         i = (i + 1) % FRAME_NUM;
     } while(i != evict_start);
     
@@ -69,6 +63,11 @@ int evict_frame() {
             // TODO: SWAP super_clean to SWAP SPACE
         }
     }
+    
+    // remove association between frame and evicted SPTE
+    struct SPTE *old_page = frame_table[evicted].page_entry; // SPTE of old page associated to the frame
+    old_page->kpage = NULL; 
+
     evict_start = (evicted + 1) % FRAME_NUM; //update evict_start
     return evicted; //return the frame index of the page you evicted
 }
