@@ -18,7 +18,6 @@ void *get_frame(struct SPTE *new_page) {
     }
     
     struct FTE *f = &frame_table[idx]; // frame you wish to store the new page in
-    struct SPTE *new_page = NULL; // SPTE of new page to be added to frame, not sure where we get this from
 
     f->page_entry = new_page;
     new_page->kpage = f->frame;
