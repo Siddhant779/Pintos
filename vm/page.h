@@ -7,7 +7,7 @@
 enum page_status {
     FRAME, // in the memory 
     SWAP, // on the swap table  
-    IN_FILE, //page is in the file needs to be brought in 
+    IN_FILE, //page is in the file needs to be brought in - on disk
     ALL_ZERO // means its all zero 
     //am i missing something else
 };

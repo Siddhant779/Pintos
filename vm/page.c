@@ -83,7 +83,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     //file_seek(spte->file, spte->file_off);
     spte->kpage = frame_page;
     file_seek (spte->file, spte->file_off);
-    printf("these are the values %d  %d  %d %d\n",spte->read_bytes, spte->zero_bytes, spte->file_off, spte->kpage);
+    printf("in page.c these are the values %p  %p  %d %d %d\n",spte->file, frame_page, spte->read_bytes, spte->zero_bytes, spte->file_off);
     int read_byte = file_read(spte->file, frame_page, spte->read_bytes);
 
     if(read_byte != (int)spte->read_bytes) {

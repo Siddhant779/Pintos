@@ -460,37 +460,39 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 
-// need to move all of this stuff into page_fault handler tahts why its in comments 
-        // /* Get a page of memory. */
-        // uint8_t *kpage = palloc_get_page(PAL_USER);
-        // if (kpage == NULL) {
-        //     return false;
-        // }
+// //need to move all of this stuff into page_fault handler tahts why its in comments 
+//         /* Get a page of memory. */
+//         uint8_t *kpage = palloc_get_page(PAL_USER);
+//         if (kpage == NULL) {
+//             return false;
+//         }
 
-        // /* Load this page. */
-        // if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes) {
-        //     palloc_free_page(kpage);
-        //     return false;
-        // }
-        // memset(kpage + page_read_bytes, 0, page_zero_bytes);
+//         /* Load this page. */
+//         if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes) {
+//             palloc_free_page(kpage);
+//             return false;
+//         }
+//         memset(kpage + page_read_bytes, 0, page_zero_bytes);
 
-        // /* Add the page to the process's address space. */
-        // if (!install_page(upage, kpage, writable)) {
-        //     palloc_free_page(kpage);
-        //     return false;
-        // }
+//         /* Add the page to the process's address space. */
+//         if (!install_page(upage, kpage, writable)) {
+//             palloc_free_page(kpage);
+//             return false;
+//         }
 
         /* Advance. */
        struct thread *current = thread_current();
+       printf("this is the pointer for the file %p\n", file);
        //ASSERT(pagedir_get_page(current->pagedir, upage) == NULL);
        bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, page_read_bytes, page_zero_bytes, writable);
-        if(condition_install == false) {
+       if(condition_install == false) {
             return false;
         }
         
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
+        ofs+=PGSIZE;
     }
     return true;
 }
