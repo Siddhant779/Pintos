@@ -72,3 +72,38 @@ int evict_frame() {
     evict_start = (evicted + 1) % FRAME_NUM; //update evict_start
     return evicted; //return the frame index of the page you evicted
 }
+
+//Function for swapping a frame with something on swap table
+void* page_swap(void* frame){
+    //Get swap block
+    struct block* swapBlock = block_get_role(BLOCK_SWAP);
+
+    //Get size of the whole swap area in units of sectors (Probably a very large number since the entire block device can store many sectors)
+    block_sector_t blockSize = block_size(swapBlock);
+
+    //Create bitmap of to track of all the swap slots in the swap area (each slot has 8 sectors)
+    struct bitmap* slots = bitmap_create(blockSize/8);
+
+    //Read all slots in swap area
+    size_t slotIndex = bitmap_scan_and_flip(slots, 0, 1, false); //Gives index of first free slot (hasn't been read from yet)
+    void* bufferSlot = (void*)malloc(BLOCK_SECTOR_SIZE * 8); //Buffer to store information for 8 sectors (1 slot)
+
+    //Read from 8 sectors
+    for(for int i = 0; i < 8; i++){
+        //Get where to read (buffer + offset)
+        void* bufferRead = bufferSlot + BLOCK_SECTOR_SIZE * i;
+
+        //Read data (not sure what the purpose of each parameter here is)
+        block_read(swapBlock, blockSize, bufferRead);
+    }
+
+    //Write to 8 sectors
+    for(for int i = 0; i < 8; i++){
+        //Get where to read (buffer + offset)
+        void* bufferRead = bufferSlot + BLOCK_SECTOR_SIZE * i;
+
+        //Write data
+        block_write(swapBlock, blockSize, bufferRead);
+    }
+
+}
