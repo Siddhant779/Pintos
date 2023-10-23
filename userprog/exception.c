@@ -146,9 +146,11 @@ page_fault(struct intr_frame *f)
     }
 
     //Set eax and sets the former value into eip
-    int eaxCopy = f->eax;
-    f->eax = 0xffffffff;
-    f->eip = (void *)eaxCopy; // do you need to cast this to void eip is a void pointer
+    if(!user) {
+        int eaxCopy = f->eax;
+        f->eax = 0xffffffff;
+        f->eip = (void *)eaxCopy; // do you need to cast this to void eip is a void pointer
+    }
 
     /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */

@@ -482,7 +482,8 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 
         /* Advance. */
        struct thread *current = thread_current();
-        bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, read_bytes, zero_bytes, writable);
+       //ASSERT(pagedir_get_page(current->pagedir, upage) == NULL);
+       bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, page_read_bytes, page_zero_bytes, writable);
         if(condition_install == false) {
             return false;
         }

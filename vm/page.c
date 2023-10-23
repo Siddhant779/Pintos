@@ -80,12 +80,15 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     // do nothing i think 
   }
   else if(spte->page_stat == IN_FILE) {
-    file_seek(spte->file, spte->file_off);
-
-    int read_byte = file_read(spte->file, spte->kpage, spte->read_bytes);
+    //file_seek(spte->file, spte->file_off);
+    spte->kpage = frame_page;
+    file_seek (spte->file, spte->file_off);
+    printf("these are the values %d  %d  %d %d\n",spte->read_bytes, spte->zero_bytes, spte->file_off, spte->kpage);
+    int read_byte = file_read(spte->file, frame_page, spte->read_bytes);
 
     if(read_byte != (int)spte->read_bytes) {
       //free the frame here - using frame_page 
+      palloc_free_page(spte->kpage);
       return false;
     }
 
@@ -96,10 +99,11 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
 
     if(!status) {
       //free the frame need to maek code for that -- this just means free up the frame 
+      palloc_free_page(spte->kpage);
       return false;
     }
 
-    spte->kpage = frame_page;
+    //spte->kpage = frame_page;
     spte->page_stat = FRAME;
 
     pagedir_set_dirty(pagedir, frame_page, false);
