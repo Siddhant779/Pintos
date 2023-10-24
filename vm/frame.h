@@ -7,6 +7,7 @@
 #include "palloc.h"
 
 const int FRAME_NUM = 367;
+const int BLOCK_SECTOR_SIZE = 512;
 struct FTE {
     void *frame; //pointer to the actual "frame" of data itself
     struct list processes; //list of processes associated with the frame
