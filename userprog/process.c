@@ -372,8 +372,6 @@ done:
 
 /* load() helpers. */
 
-static bool install_page(void *upage, void *kpage, bool writable);
-
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
 static bool

@@ -1,5 +1,6 @@
 #include "frame.h"
 #include "pagedir.h"
+#include "userprog/process.h"
 
 /* Frame logic (add locks here)
  * Input: pointer to SPTE that you wish to associate to a frame
@@ -20,6 +21,7 @@ void *get_frame(struct SPTE *new_page) {
     struct FTE *f = &frame_table[idx]; // frame you wish to store the new page in
 
     f->page_entry = new_page;
+    install_page(new_page->upage, f->frame, true);
     new_page->kpage = f->frame;
     return f->frame;
 }
