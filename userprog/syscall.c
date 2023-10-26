@@ -259,6 +259,7 @@ syscall_remove(const char* file_name) {
 }
 
 int
+
 syscall_open(const char *file_name) {
   //lock for when accessing files 
   lock_acquire(&sys_lock);
@@ -507,15 +508,33 @@ syscall_handler(struct intr_frame *f UNUSED)
         syscall_halt();
         
     } else if(signal == SYS_OPEN) {
-        get_args_stack(1, f, &args_v[0]);
-        //gets the physical address for the pointer to the file 
-        void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
-        if(ptr == NULL) {
-          return syscall_exit(-1);
+      const char* filename;
+      int return_code;
+
+      memory_copy(f->esp + 4, &filename, sizeof(filename));
+      void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) filename);
+      if(ptr == NULL) {
+         return syscall_exit(-1);
         }
-        args_v[0] = (int)ptr;  // gets the actual address 
-        //stores the fd in eax that was returned by syscall_open
-        f->eax = syscall_open((const char *)args_v[0]);  // remove this file
+      if(filename == NULL) {
+        return syscall_exit(-1);
+        }
+      //filename = (int)ptr;  // gets the actual address 
+      //check_addy((const uint8_t *) filename, f, false);
+      return_code = syscall_open(filename);
+      f->eax = return_code;
+
+        // const char *filename;
+        // memory_copy(f->esp + 4, &filename, sizeof(filename));
+        // //get_args_stack(1, f, &args_v[0]);
+        // //gets the physical address for the pointer to the file 
+        // void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) filename);
+        // if(ptr == NULL) {
+        //   return syscall_exit(-1);
+        // }
+        // args_v[0] = (int)ptr;  // gets the actual address 
+        // //stores the fd in eax that was returned by syscall_open
+        // f->eax = syscall_open((const char *)args_v[0]);  // remove this file
         
     } else if(signal == SYS_READ) {
       int fd, return_code;
