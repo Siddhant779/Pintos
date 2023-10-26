@@ -16,16 +16,17 @@ static bool install_page(void *upage, void *kpage, bool writable);
  * 6. Update SPT of process that just obtained new frame
  *     - should be in memory */
 void *get_frame(struct SPTE *new_page) {
-    size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false); // 1
+    size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false); // returns index of first valid frame, returns BITMAP_ERROR if none
     if(idx == BITMAP_ERROR) {
-        idx = evict_frame(); // 2
+        idx = evict_frame(); // updating the old SPTE should be automatically handled during eviction
     }
     
     struct FTE *f = &frame_table[idx]; // frame you wish to store the new page in
 
     f->page_entry = new_page;
-    install_page(new_page->upage, f->frame, new_page->writeable);
-    new_page->kpage = f->frame;
+    install_page(new_page->upage, f->frame, new_page->writeable); //install new page
+
+    new_page->kpage = f->frame; //update new SPT
     return f->frame;
 }
 
