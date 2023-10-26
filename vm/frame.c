@@ -1,6 +1,9 @@
 #include "frame.h"
-#include "pagedir.h"
-#include "userprog/process.h"
+#include "userprog/pagedir.h"
+#include "threads/thread.h"\
+
+
+static bool install_page(void *upage, void *kpage, bool writable);
 
 /* Frame logic (add locks here)
  * Input: pointer to SPTE that you wish to associate to a frame
@@ -21,7 +24,7 @@ void *get_frame(struct SPTE *new_page) {
     struct FTE *f = &frame_table[idx]; // frame you wish to store the new page in
 
     f->page_entry = new_page;
-    install_page(new_page->upage, f->frame, true);
+    install_page(new_page->upage, f->frame, new_page->writeable);
     new_page->kpage = f->frame;
     return f->frame;
 }
@@ -124,3 +127,14 @@ void* getFromSwapArea(void* frame, size_t slotIndex){
 }
 
 //Frame is the actual physical memory, pages are the info that you want to put in frames. When you are using a page, it has to be in frame, or it can be in swap area
+
+static bool
+install_page(void *upage, void *kpage, bool writable)
+{
+    struct thread *t = thread_current();
+
+    /* Verify that there's not already a page at that virtual
+     * address, then map our page there. */
+    return pagedir_get_page(t->pagedir, upage) == NULL
+           && pagedir_set_page(t->pagedir, upage, kpage, writable);
+}
