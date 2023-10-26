@@ -136,23 +136,8 @@ page_fault(struct intr_frame *f)
      * [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      * (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
-    //this is the VM part 
 
-    struct thread *curr = thread_current();
-    void *fault_page = (void *)pg_round_down(fault_addr);
-
-    if(not_present) {
-        load_page(curr->SuppT, curr->pagedir, fault_page);
-    }
-
-    //Set eax and sets the former value into eip
-    if(!user) {
-        int eaxCopy = f->eax;
-        f->eax = 0xffffffff;
-        f->eip = (void *)eaxCopy; // do you need to cast this to void eip is a void pointer
-    }
-
-    /* Turn interrupts back on (they were only off so that we could
+   /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */
     intr_enable();
 
@@ -164,14 +149,40 @@ page_fault(struct intr_frame *f)
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
 
+
+    struct thread *curr = thread_current();
+    void *fault_page = (void *)pg_round_down(fault_addr);
+
+    if(not_present) {
+        if(!load_page(curr->SuppT, curr->pagedir, fault_page)) {
+            goto PAGE_FAULT_ERROR;
+        }
+    }
+    else if(!not_present){
+        goto PAGE_FAULT_ERROR;
+    }
+
+
+    return;
+
+    //Set eax and sets the former value into eip
+    PAGE_FAULT_ERROR:
+
+    if(!user) {
+        int eaxCopy = f->eax;
+        f->eax = 0xffffffff;
+        f->eip = (void *)eaxCopy; // do you need to cast this to void eip is a void pointer
+    }
+
     /* To implement virtual memory, delete the rest of the function
      * body, and replace it with code that brings in the page to
      * which fault_addr refers. */
-    printf("Page fault at %p: %s error %s page in %s context.\n",
-           fault_addr,
-           not_present ? "not present" : "rights violation",
-           write ? "writing" : "reading",
-           user ? "user" : "kernel");
+    // commented it out becuase its only for debugging 
+    // printf("Page fault at %p: %s error %s page in %s context.\n",
+    //        fault_addr,
+    //        not_present ? "not present" : "rights violation",
+    //        write ? "writing" : "reading",
+    //        user ? "user" : "kernel");
     //kill(f);
     syscall_exit(-1); // should it be negative 1???
     // call sysexit here 

@@ -4,6 +4,9 @@
 #include "hash.h"
 #include "filesys/file.h"
 #include "threads/palloc.h"
+#include "threads/vaddr.h"
+#include "userprog/syscall.h"
+
 enum page_status {
     FRAME, // in the memory 
     SWAP, // on the swap table  
@@ -25,14 +28,11 @@ struct SPTE {
     //the key for the hash could be the address of the page, fault address, or the page number 
     struct file *file; 
     off_t file_off;
-    uint32_t read_bytes;
-    uint32_t zero_bytes;
+    uint32_t page_read_bytes;
+    uint32_t page_zero_bytes;
 
     void *kpage; // frame associated with this page  - could be null if there is no frame 
     void *upage; // for hte virutal address of hte page this exists as the key 
-
-    size_t page_read_bytes;
-    size_t page_zero_bytes;
 
     //bool isDirty; //Indicates of page has been modified or not -- in pagedir there is a function called isDirty that checks if the SPTE is dirty
     bool writeable;

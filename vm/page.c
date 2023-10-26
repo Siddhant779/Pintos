@@ -2,6 +2,8 @@
 #include <string.h>
 #include "page.h"
 
+
+
 //Each thread should init this, stores SPT (Supplemental Page Table)
 static unsigned SPT_hash_func(const struct hash_elem *e, void *aux);
 static bool SPT_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
@@ -43,8 +45,8 @@ bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *u
   spte->file_off = ofs;
   spte->upage = upage;
   spte->kpage = NULL;
-  spte->read_bytes = read_bytes;
-  spte->zero_bytes = zero_bytes;
+  spte->page_read_bytes = read_bytes;
+  spte->page_zero_bytes = zero_bytes;
   spte->writeable = writable;
   spte->page_stat = IN_FILE;
 
@@ -74,45 +76,51 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   if(frame_page == NULL) {
     return false;
   }
-
+   bool writeable2 = true;
   // going to need to chagne this code as we get more conditions so that it reflects what we have 
   if(spte->page_stat == FRAME){
     // do nothing i think 
   }
   else if(spte->page_stat == IN_FILE) {
-    //file_seek(spte->file, spte->file_off);
+    size_t page_read_bytes = spte->page_read_bytes < PGSIZE ? spte->page_read_bytes : PGSIZE;
+    size_t page_zero_bytes = PGSIZE - page_read_bytes;
+    lock_acquire(&sys_lock);
+    file_seek(spte->file, spte->file_off);
     spte->kpage = frame_page;
-    file_seek (spte->file, spte->file_off);
-    printf("in page.c these are the values %p  %p  %d %d %d\n",spte->file, frame_page, spte->read_bytes, spte->zero_bytes, spte->file_off);
-    int read_byte = file_read(spte->file, frame_page, spte->read_bytes);
+    int read_byte = file_read(spte->file, frame_page, page_read_bytes);
+    lock_release(&sys_lock);
 
-    if(read_byte != (int)spte->read_bytes) {
+    if(read_byte != (int)page_read_bytes) {
       //free the frame here - using frame_page 
       palloc_free_page(spte->kpage);
+      //printf("this is freeing up the page\n");
       return false;
     }
 
-    memset (spte->kpage + read_byte, 0, spte->zero_bytes);
+    memset (spte->kpage + read_byte, 0, page_zero_bytes);
 
-    bool status  = (pagedir_get_page(pagedir, spte->upage) == NULL);
-    status = status && pagedir_set_page(pagedir, spte->upage, frame_page, spte->writeable);
+  
+    writeable2 = spte->writeable;
+
+
+  }
+  bool status  = (pagedir_get_page(pagedir, spte->upage) == NULL);
+    status = status && pagedir_set_page(pagedir, spte->upage, frame_page, true);
 
     if(!status) {
       //free the frame need to maek code for that -- this just means free up the frame 
       palloc_free_page(spte->kpage);
+      printf("this is freeing up the page\n");
       return false;
     }
 
-    //spte->kpage = frame_page;
+    spte->kpage = frame_page;
     spte->page_stat = FRAME;
 
     pagedir_set_dirty(pagedir, frame_page, false);
 
 
     return true;
-
-  }
-
 
 
 }
