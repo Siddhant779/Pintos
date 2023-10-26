@@ -54,20 +54,24 @@ int evict_frame() {
         }
         i = (i + 1) % FRAME_NUM;
     } while(i != evict_start);
+
+    void* newArea = NULL;
     
     // if no frame was neither accessed nor dirty, evict a non-dirty frame
     if(evicted == -1) {
         evicted = clean;
         //if all frames are dirty, evict a random frame and swap the page to SWAP SPACE
         if(evicted == -1) {
-            evicted = 0; //set super_clean to some random page number
-            // TODO: SWAP super_clean to SWAP SPACE
+            evicted = 0; //evict some random frame
+            newArea = putInSwapArea(frame_table[evicted].frame); //place old frame data into swap space
         }
     }
     
+    // may need to write frame data to disk but not sure how to do this
+
     // remove association between frame and evicted SPTE
     struct SPTE *old_page = frame_table[evicted].page_entry; // SPTE of old page associated to the frame
-    old_page->kpage = NULL; 
+    old_page->kpage = newArea; 
 
     evict_start = (evicted + 1) % FRAME_NUM; //update evict_start
     return evicted; //return the frame index of the page you evicted
@@ -88,7 +92,7 @@ void* putInSwapArea(void* frame){
     size_t slotIndex = bitmap_scan_and_flip(slots, 0, 1, false); //Gives index of first free slot. It will find the first zero and flip it to one
 
     //Write to 8 sectors. This takes whatever data from frame and put it on the swap area
-    for(for int i = 0; i < 8; i++){
+    for(int i = 0; i < 8; i++) {
         //Get where data input (buffer + offset)
         void* bufferRead = frame + BLOCK_SECTOR_SIZE * i;
 
@@ -109,7 +113,7 @@ void* getFromSwapArea(void* frame, size_t slotIndex){
     block_sector_t blockSize = block_size(swapBlock);
 
     //Read from 8 sectors so the frame can be obtained from swap area
-    for(for int i = 0; i < 8; i++){
+    for(int i = 0; i < 8; i++){
         //Get where to read (buffer + offset)
         void* bufferRead = frame + BLOCK_SECTOR_SIZE * i;
 
