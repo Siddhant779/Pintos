@@ -82,7 +82,7 @@ int evict_frame() {
 }
 
 //Function for swapping a frame with something on swap table
-void* putInSwapArea(void* frame){
+void* putInSwapArea(void* frame, size_t* index){
     //Get swap block (entire swap area 4MB)
     struct block* swapBlock = block_get_role(BLOCK_SWAP);
 
@@ -94,6 +94,9 @@ void* putInSwapArea(void* frame){
 
     //Read all slots in swap area, find a slot in swap area to put the frae
     size_t slotIndex = bitmap_scan_and_flip(slots, 0, 1, false); //Gives index of first free slot. It will find the first zero and flip it to one
+
+    //Passes information to parameter about index of frame in the swap area
+    *index = slotIndex;
 
     //Write to 8 sectors. This takes whatever data from frame and put it on the swap area
     for(int i = 0; i < 8; i++) {
