@@ -10,58 +10,6 @@
 #include "pagedir.h"
 #include "process.h"
 #include "exception.h"
-/*
-static void
-check_user (const uint8_t *uaddr) {
-  // check uaddr range or segfaults
-  if(get_user (uaddr) == -1)
-    fail_invalid_access();
-}
-
-static int32_t
-get_user (const uint8_t *uaddr) {
-  // check that a user pointer `uaddr` points below PHYS_BASE
-  if (! ((void*)uaddr < PHYS_BASE)) {
-    return -1;
-  }
-
-  // as suggested in the reference manual, see (3.1.5)
-  int result;
-  asm ("movl $1f, %0; movzbl %1, %0; 1:"
-      : "=&a" (result) : "m" (*uaddr));
-  return result;
-}
-
-static int
-memread_user (void *src, void *dst, size_t bytes)
-{
-  int32_t value;
-  size_t i;
-  for(i=0; i<bytes; i++) {
-    value = get_user(src + i);
-    if(value == -1) // segfault or invalid memory access
-      fail_invalid_access();
-
-    *(char*)(dst + i) = value & 0xff;
-  }
-  return (int)bytes;
-}
-
- memread_user(f->esp + 4, &fd, sizeof(fd));
-      memread_user(f->esp + 8, &buffer, sizeof(buffer));
-      memread_user(f->esp + 12, &size, sizeof(size));
-
-      return_code = sys_write(fd, buffer, size);
-      f->eax = (uint32_t) return_code;
-      break;
-
-
-int sys_write(int fd, const void *buffer, unsigned size) {
-  // memory validation : [buffer+0, buffer+size) should be all valid
-  check_user((const uint8_t*) buffer);
-  check_user((const uint8_t*) buffer + size - 1);
-*/
-
 
 bool sys_lock_init = false;
 
