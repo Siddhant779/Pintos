@@ -1,6 +1,7 @@
 #include <hash.h>
 #include <string.h>
 #include "page.h"
+#include "swap.h"
 
 
 
@@ -82,7 +83,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     // do nothing i think 
   }
   else if(spte->page_stat == SWAP) {
-    
+    getFromSwapArea(spte->swap_idx, frame_page);
   }
   else if(spte->page_stat == IN_FILE) {
     size_t page_read_bytes = spte->page_read_bytes < PGSIZE ? spte->page_read_bytes : PGSIZE;
