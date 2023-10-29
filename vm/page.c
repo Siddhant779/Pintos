@@ -72,7 +72,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     return true;
   }
 
-  void *frame_page = palloc_get_page (PAL_USER);
+  void *frame_page = get_frame (spte, PAL_USER);
   if(frame_page == NULL) {
     return false;
   }
@@ -80,6 +80,9 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   // going to need to chagne this code as we get more conditions so that it reflects what we have 
   if(spte->page_stat == FRAME){
     // do nothing i think 
+  }
+  else if(spte->page_stat == SWAP) {
+    
   }
   else if(spte->page_stat == IN_FILE) {
     size_t page_read_bytes = spte->page_read_bytes < PGSIZE ? spte->page_read_bytes : PGSIZE;

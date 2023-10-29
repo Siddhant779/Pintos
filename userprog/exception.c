@@ -152,7 +152,7 @@ page_fault(struct intr_frame *f)
 
     struct thread *curr = thread_current();
     void *fault_page = (void *)pg_round_down(fault_addr);
-
+    //printf("exception.c : upage %p\n", fault_page);
     if(not_present) {
         if(!load_page(curr->SuppT, curr->pagedir, fault_page)) {
             goto PAGE_FAULT_ERROR;
