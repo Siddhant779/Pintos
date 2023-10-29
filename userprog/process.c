@@ -20,6 +20,8 @@
 #include "userprog/process.h"
 #include "userprog/tss.h"
 #include "syscall.h"
+#include "vm/frame.h"
+#include "vm/page.h"
 
 
 #define LOGGING_LEVEL 6
@@ -510,8 +512,12 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     bool success = false;
 
     log(L_TRACE, "setup_stack()");
-
-    kpage = palloc_get_page(PAL_USER | PAL_ZERO); //Grabs user page from memory (zeroed out)
+    struct SPTE spte;
+    struct thread *t = thread_current();
+    spte.upage = PHYS_BASE - PGSIZE;
+    //printf("setupstack.c : upage %p\n", spte.upage);
+    kpage = get_frame(&spte, PAL_USER | PAL_ZERO);
+    //kpage = palloc_get_page(PAL_USER | PAL_ZERO); //Grabs user page from memory (zeroed out)
     if (kpage != NULL) {
         success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true); //If successful, install page
         if (success) {

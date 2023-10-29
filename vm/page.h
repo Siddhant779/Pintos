@@ -39,6 +39,7 @@ struct SPTE {
 
     enum page_status page_stat;
 
+    int swap_idx;
     
     // we need something for the swap here 
 };

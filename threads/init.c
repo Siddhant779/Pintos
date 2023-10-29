@@ -23,6 +23,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+#include "vm/swap.h"
 #ifdef USERPROG
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
@@ -123,6 +124,7 @@ main(void)
 #endif
 
     /* Start thread scheduler and enable interrupts. */
+    frame_init();
     thread_start();
     serial_init_queue();
     timer_calibrate();
@@ -135,9 +137,9 @@ main(void)
 #endif
 
 #ifdef VM
-    frame_init();
+    //frame_init();
 #endif
-
+    swap_init();
     printf("Boot complete.\n");
 
     /* Run actions specified on kernel command line. */
