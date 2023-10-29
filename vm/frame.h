@@ -44,8 +44,5 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags);
 
 int evict_frame(uint32_t *pagedir); //eviction algorithm, should return the index of the frame corresponsing to the page that was evicted
 
-void* putInSwapArea(void* frame);
-
-void* getFromSwapArea(void* frame, size_t slotIndex);
 
 #endif

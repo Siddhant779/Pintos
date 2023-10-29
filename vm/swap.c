@@ -19,7 +19,7 @@ void swap_init(void) {
     bitmap_set_all(block_tracker, true);
 }
 
-int swap_get(void *k_page) {
+int putInSwapArea(void *k_page) {
     size_t swap_avail = bitmap_scan(block_tracker, 0, 1, true);
 
     for(int i = 0; i < SWAP_SLOT_SIZE; i++) {
@@ -31,7 +31,7 @@ int swap_get(void *k_page) {
     return swap_avail;
 }
 
-void swap_insert(int swap_idx, void *k_page) {
+void getFromSwapArea(int swap_idx, void *k_page) {
     ASSERT(swap_idx < swap_size);
 
     if(bitmap_test(block_tracker, swap_idx) == false) {

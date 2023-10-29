@@ -9,8 +9,8 @@
 
 
 void swap_init(void);
-void swap_insert(int swap_idx, void *k_page);
-int swap_get(void *k_page);
+void getFromSwapArea(int swap_idx, void *k_page);
+int putInSwapArea(void *k_page);
 void swap_free(int swap_idx);
 
 

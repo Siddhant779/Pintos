@@ -23,7 +23,6 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     if(idx != BITMAP_ERROR) {
         void *k_page = palloc_get_page(PAL_USER | flags);
         frame_table[idx].kpage = k_page;
-        bitmap_mark(frame_map, idx);
         new_page->kpage = frame_table[idx].kpage;
     }
     else if(idx == BITMAP_ERROR) {
@@ -32,7 +31,9 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         bool is_dirty_page = false;
         is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->kpage);
 
-        int swap_idx = swap_get(frame_table[idx].kpage);
+        int swap_idx = putInSwapArea(frame_table[idx].kpage);
+        pagedir_set_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage, true);
+        frame_table[idx].page_entry->swap_idx = swap_idx;
         //need to set the SPTE to dirty and swap now ;
 
 
