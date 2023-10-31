@@ -148,21 +148,32 @@ page_fault(struct intr_frame *f)
     not_present = (f->error_code & PF_P) == 0;
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
-
+    
 
     struct thread *curr = thread_current();
     void *fault_page = (void *)pg_round_down(fault_addr);
-    //printf("exception.c : upage %p\n", fault_page);
-    if(not_present) {
-        if(!load_page(curr->SuppT, curr->pagedir, fault_page)) {
-            goto PAGE_FAULT_ERROR;
-        }
-    }
-    else if(!not_present){
+
+    if(!not_present) {
         goto PAGE_FAULT_ERROR;
     }
+    
+    if(not_present) {
+        void *esp = user ? f->esp : curr ->esp;
 
-
+        struct SPTE *temp = lookup_page(curr->SuppT, fault_page);
+        if(temp == NULL) {
+        // says that the stack size is 8 MB so thats why i did 0x800000
+            if ((esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32 ) && (fault_addr < PHYS_BASE && PHYS_BASE - 0x800000 <= fault_addr)) {
+                SPTE_install_zeropage (curr->SuppT, fault_page);
+            }
+        }
+    //printf("exception.c : upage %p\n", fault_page);
+        if(not_present) {
+            if(!load_page(curr->SuppT, curr->pagedir, fault_page)) {
+                goto PAGE_FAULT_ERROR;
+            }
+        }
+    } 
     return;
 
     //Set eax and sets the former value into eip

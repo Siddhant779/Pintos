@@ -6,6 +6,22 @@
 static bool install_page(void *upage, void *kpage, bool writable);
 static struct lock frame_lock;
 
+static unsigned FTE_hash_func(const struct hash_elem *e, void *aux);
+static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
+
+static unsigned FTE_hash_func(const struct hash_elem *e, void *aux) {
+  struct FTE *entry = hash_entry(e, struct FTE, frame_elem);
+  return hash_int( (int)entry->upage );
+}
+
+static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
+  struct FTE *a_entry = hash_entry(a, struct FTE, frame_elem);
+  struct FTE *b_entry = hash_entry(b, struct FTE, frame_elem);
+
+  return a_entry->upage < b_entry->upage;
+}
+
 /* Frame logic (add locks here)
  * Input: pointer to SPTE that you wish to associate to a frame
  * if frame is available, allocate to process that requested (link SPTE)
@@ -29,6 +45,7 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         idx = evict_frame(thread_current()->pagedir); // updating the old SPTE should be automatically handled during eviction
         pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
         bool is_dirty_page = false;
+        frame_table[idx].pinned = false;
         is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->kpage);
 
         int swap_idx = putInSwapArea(frame_table[idx].kpage);
@@ -69,6 +86,7 @@ void frame_init() {
         frame_table[i].index = i;
     }
     
+    hash_init(&frame_entries, FTE_hash_func, FTE_less_func, NULL);
     list_init(&frame_list);
     evict_start = 0;
 

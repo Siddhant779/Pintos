@@ -61,6 +61,25 @@ bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *u
   
 }
 
+bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage)
+{
+  struct SPTE *spte;
+  spte = (struct SPTE *) malloc(sizeof(struct SPTE));
+
+  spte->upage = upage;
+  spte->kpage = NULL;
+  spte->page_stat = ALL_ZERO;
+
+  struct hash_elem *prev_elem;
+  prev_elem = hash_insert (&SuT->page_entries, &spte->SPTE_hash_elem);
+  if (prev_elem == NULL) return true;
+
+  // there is already an entry -- impossible state
+  PANIC("Duplicated SUPT entry for zeropage");
+  return false;
+}
+
+
 // this is the main function for loading the page for the address upage 
 bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   struct SPTE *spte;
@@ -84,6 +103,9 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   }
   else if(spte->page_stat == SWAP) {
     getFromSwapArea(spte->swap_idx, frame_page);
+  }
+  else if(spte->page_stat == ALL_ZERO) {
+    memset(frame_page, 0, PGSIZE);
   }
   else if(spte->page_stat == IN_FILE) {
     size_t page_read_bytes = spte->page_read_bytes < PGSIZE ? spte->page_read_bytes : PGSIZE;
