@@ -119,6 +119,8 @@ struct thread {
 
     //Need 2 structs, one is hash and one is hash elem
     struct SPT *SuppT;
+
+    void *esp;
     
 };
 

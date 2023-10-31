@@ -46,6 +46,7 @@ struct SPTE {
 
 
 struct SPT* SPT_init(void);
+bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage);
 bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage);
 #endif

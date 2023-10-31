@@ -435,6 +435,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   //if its the first time initializing the syslock then do a lock_init and set sys_lock_init to true
     //Get value of signal
     void *stackPhysicalPointer = pagedir_get_page(thread_current()->pagedir, (const void *) f->esp);
+    thread_current()->esp = f->esp;
     //if the stack pointer is null or its above PHYS_Base then its not a good pointer 
     if(stackPhysicalPointer == NULL) {
       return syscall_exit(-1);
