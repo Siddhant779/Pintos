@@ -156,7 +156,6 @@ page_fault(struct intr_frame *f)
     if(!not_present) {
         goto PAGE_FAULT_ERROR;
     }
-    
     if(not_present) {
         void *esp = user ? f->esp : curr ->esp;
 
@@ -164,16 +163,23 @@ page_fault(struct intr_frame *f)
         if(temp == NULL) {
         // says that the stack size is 8 MB so thats why i did 0x800000
             if ((esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32 ) && (fault_addr < PHYS_BASE && PHYS_BASE - 0x800000 <= fault_addr)) {
+                //printf("in the stack growth part \n");
                 SPTE_install_zeropage (curr->SuppT, fault_page);
             }
         }
     //printf("exception.c : upage %p\n", fault_page);
         if(not_present) {
             if(!load_page(curr->SuppT, curr->pagedir, fault_page)) {
+                //printf("in the lazy loading part \n");
                 goto PAGE_FAULT_ERROR;
             }
         }
     } 
+    // printf("Page fault at %p: %s error %s page in %s context.\n",
+    //        fault_addr,
+    //        not_present ? "not present" : "rights violation",
+    //        write ? "writing" : "reading",
+    //        user ? "user" : "kernel");
     return;
 
     //Set eax and sets the former value into eip
@@ -189,11 +195,6 @@ page_fault(struct intr_frame *f)
      * body, and replace it with code that brings in the page to
      * which fault_addr refers. */
     // commented it out becuase its only for debugging 
-    // printf("Page fault at %p: %s error %s page in %s context.\n",
-    //        fault_addr,
-    //        not_present ? "not present" : "rights violation",
-    //        write ? "writing" : "reading",
-    //        user ? "user" : "kernel");
     //kill(f);
     syscall_exit(-1); // should it be negative 1???
     // call sysexit here 

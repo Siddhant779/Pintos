@@ -23,7 +23,13 @@ struct FTE {
     bool pinned; // this is something we need for the eviction alogorithm - if a pin is framed that means we shouldn't remove it 
 };
 
-struct hash frame_entries;
+struct FTE_hash {
+    uint32_t index;
+    void *kpage;
+    struct hash_elem frame_elem;
+};
+
+struct hash frame_entries; // used for mapping the kpage to the index does not need to contain that much stuff;
 
 struct list frame_list; // this is the main frame list 
 
@@ -48,5 +54,6 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags);
 
 int evict_frame(uint32_t *pagedir); //eviction algorithm, should return the index of the frame corresponsing to the page that was evicted
 
+void frame_pinning(void *kpage, bool pin);
 
 #endif

@@ -621,6 +621,8 @@ syscall_handler(struct intr_frame *f UNUSED)
 
       return_code = syscall_write(fd, buffer, size, f);
       f->eax = (uint32_t) return_code;
+      //frame_pinning(kpage, false); 
+
 
 
       //   // Write signal
