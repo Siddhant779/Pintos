@@ -34,7 +34,8 @@ struct SPTE*
 lookup_page(struct SPT *suppt, void *upage){
   struct SPTE temp_spte;
   temp_spte.upage = upage;
-
+  //printf("number of hash %d\n", hash_size(&suppt->page_entries));
+  //printf("this is the upage %p\n", upage);
   struct hash_elem *elem = hash_find (&suppt->page_entries, &temp_spte.SPTE_hash_elem);
   if(elem == NULL) return NULL;
   return hash_entry(elem, struct SPTE, SPTE_hash_elem);
@@ -50,6 +51,24 @@ bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *u
   spte->page_zero_bytes = zero_bytes;
   spte->writeable = writable;
   spte->page_stat = IN_FILE;
+
+  struct hash_elem *elem_exist;
+  elem_exist = hash_insert(&SuT->page_entries, &spte->SPTE_hash_elem);
+  //hash_insert 
+  if(elem_exist == NULL) {
+    return true;
+  }
+  return false;
+  
+}
+
+bool SPTE_install_file_setup_stack(struct SPT *SuT, uint8_t *upage, uint8_t *kpage, bool writeable)
+{
+  struct SPTE *spte = (struct SPTE *) malloc(sizeof(struct SPTE));
+  spte->upage = upage;
+  spte->kpage = kpage;
+  spte->page_stat = FRAME;
+  spte->writeable = writeable;
 
   struct hash_elem *elem_exist;
   elem_exist = hash_insert(&SuT->page_entries, &spte->SPTE_hash_elem);

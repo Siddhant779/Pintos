@@ -11,15 +11,15 @@ static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, 
 
 
 static unsigned FTE_hash_func(const struct hash_elem *e, void *aux) {
-  struct FTE *entry = hash_entry(e, struct FTE, frame_elem);
-  return hash_int( (int)entry->upage );
+  struct FTE_hash *entry = hash_entry(e, struct FTE_hash, frame_elem);
+  return hash_int( (int)entry->kpage );
 }
 
 static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
-  struct FTE *a_entry = hash_entry(a, struct FTE, frame_elem);
-  struct FTE *b_entry = hash_entry(b, struct FTE, frame_elem);
+  struct FTE_hash *a_entry = hash_entry(a, struct FTE_hash, frame_elem);
+  struct FTE_hash *b_entry = hash_entry(b, struct FTE_hash, frame_elem);
 
-  return a_entry->upage < b_entry->upage;
+  return a_entry->kpage < b_entry->kpage;
 }
 
 /* Frame logic (add locks here)
@@ -34,10 +34,10 @@ static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, 
  *     - should be in memory */
 void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     lock_acquire(&frame_lock);
-
+    void *k_page;
     size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false); // returns index of first valid frame, returns BITMAP_ERROR if none
     if(idx != BITMAP_ERROR) {
-        void *k_page = palloc_get_page(PAL_USER | flags);
+        k_page = palloc_get_page(PAL_USER | flags);
         frame_table[idx].kpage = k_page;
         new_page->kpage = frame_table[idx].kpage;
     }
@@ -47,24 +47,37 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         bool is_dirty_page = false;
         frame_table[idx].pinned = false;
         is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->kpage);
+        if(is_dirty_page) {
+            //put it in to swapArea
+            int swap_idx = putInSwapArea(frame_table[idx].kpage);
+            pagedir_set_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage, true);
+            frame_table[idx].page_entry->swap_idx = swap_idx;
+            freeUpFrame(frame_table[idx].kpage);
+            palloc_free_page(frame_table[idx].kpage);
+        }
+        else{
+            freeUpFrame(frame_table[idx].kpage);
+            palloc_free_page(frame_table[idx].kpage);
 
-        int swap_idx = putInSwapArea(frame_table[idx].kpage);
-        pagedir_set_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage, true);
-        frame_table[idx].page_entry->swap_idx = swap_idx;
+        }
         //need to set the SPTE to dirty and swap now ;
-
-
-        palloc_free_page(frame_table[idx].kpage);
-        void *k_page = palloc_get_page(PAL_USER | flags);
+        // you need some way for the SPTE to know that this is the swap index 
+        //remove from the hash here -we need the hash for pinning 
+        k_page = palloc_get_page(PAL_USER | flags);
         new_page->kpage = frame_table[idx].kpage;
         //within the evict frame or here you actually remove the page - need to malloc for each frame then
     }
-   // struct FTE *f = &frame_table[idx]; // frame you wish to store the new page in
+    struct FTE_hash *f = malloc(sizeof(struct FTE_hash)); // frame you wish to store the new page in
     //frame_table[idx] = *f;
     //new_page->kpage = k_page;
+    frame_table[idx].upage = new_page->upage;
     frame_table[idx].thr = thread_current();
     frame_table[idx].page_entry = new_page;
     frame_table[idx].pinned = true;
+    f->index = idx;
+    f->kpage = k_page;
+    hash_insert(&frame_entries, &(f->frame_elem));
+
 
     //install_page(new_page->upage, f->frame, new_page->writeable); //install new page
      //update new SPT
@@ -72,7 +85,31 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     return new_page->kpage;
     //return k_page;
 }
+void freeUpFrame(void *kpage) {
+    // this is going to be used for freeing up frames that are not dirty
+    lock_acquire(&frame_lock);
+    struct FTE_hash *fte_temp;
+    fte_temp->kpage = kpage;
+    struct hash_elem *elem = hash_find(&frame_entries,&(fte_temp->frame_elem));
+    if(elem == NULL) {
+        printf("there is somethign wrong with program look into this ");
+    }
+    struct FTE_hash *fte_pin;
+    fte_pin = hash_entry(elem, struct FTE_hash, frame_elem);
+    int index = fte_pin->index;
+    hash_delete (&(frame_entries), &(fte_pin->frame_elem));
+}
+void SPTE_set_swap(struct SPT *supT, void *upage, int swap_idx) {
+    struct SPTE *supTe;
+    supTe = lookup_page(supT, upage);
+    if(supTe == NULL) {
+        return;
+    }
+    supTe->swap_idx = swap_idx;
+    supTe->page_stat = SWAP;
+    supTe->kpage == NULL;
 
+}
 void frame_init() {
     lock_init(&frame_lock);
     frame_map = bitmap_create(FRAME_NUM); // create 367 bit bitmap to keep track of frames. TODO: destroy the bitmap when done
@@ -92,6 +129,20 @@ void frame_init() {
 
 }
 
+void frame_pinning(void *kpage, bool pin) {
+    lock_acquire(&frame_lock);
+    struct FTE_hash *fte_temp;
+    fte_temp->kpage = kpage;
+    struct hash_elem *elem = hash_find(&frame_entries,&(fte_temp->frame_elem));
+    if(elem == NULL) {
+        printf("there is somethign wrong with program look into this ");
+    }
+    struct FTE_hash *fte_pin;
+    fte_pin = hash_entry(elem, struct FTE_hash, frame_elem);
+    int index = fte_pin->index;
+    frame_table[index]. pinned = pin;
+    lock_release(&frame_lock);
+}
 int evict_frame(uint32_t *pagedir) {
     int i = evict_start;
     int evicted = -1; // frame index of the frame you are evicting (not accessed and not dirty by default)
