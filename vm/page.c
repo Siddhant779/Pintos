@@ -150,7 +150,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
 
   }
   bool status  = (pagedir_get_page(pagedir, spte->upage) == NULL);
-    status = status && pagedir_set_page(pagedir, spte->upage, frame_page, true);
+    status = status && pagedir_set_page(pagedir, spte->upage, frame_page, writeable2);
 
     if(!status) {
       //free the frame need to maek code for that -- this just means free up the frame 

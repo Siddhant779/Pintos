@@ -421,7 +421,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     } else if(signal == SYS_CREATE) {
         get_args_stack(2,f, &args_v[0]);
         // get the physical address for the pointer to the file
-        check_addy((const uint8_t *) args_v[0], f, true);
+        check_addy((const uint8_t *) args_v[0], f, false);
         void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
         if(ptr == NULL) {
           return syscall_exit(-1);
