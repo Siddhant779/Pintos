@@ -41,6 +41,8 @@ struct FTE *frame_table;
 
 int evict_start; //points to the index of the last evicted frame + 1, or 0 by default
 
+int hi_test;
+
 void frame_init(void); //initialize frame table and frame bitmap
 
 /*
@@ -53,6 +55,8 @@ void frame_init(void); //initialize frame table and frame bitmap
 void *get_frame(struct SPTE *new_page, enum palloc_flags flags);
 
 int evict_frame(uint32_t *pagedir); //eviction algorithm, should return the index of the frame corresponsing to the page that was evicted
+
+void frame_by_upage(struct SPT *supT, void *upage, bool pinning);
 
 void frame_pinning(void *kpage, bool pin);
 

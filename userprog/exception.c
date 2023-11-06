@@ -152,7 +152,7 @@ page_fault(struct intr_frame *f)
 
     struct thread *curr = thread_current();
     void *fault_page = (void *)pg_round_down(fault_addr);
-
+    //printf("fault page: %p");
     if(!not_present) {
         goto PAGE_FAULT_ERROR;
     }
@@ -175,11 +175,6 @@ page_fault(struct intr_frame *f)
             }
         }
     } 
-    // printf("Page fault at %p: %s error %s page in %s context.\n",
-    //        fault_addr,
-    //        not_present ? "not present" : "rights violation",
-    //        write ? "writing" : "reading",
-    //        user ? "user" : "kernel");
     return;
 
     //Set eax and sets the former value into eip
@@ -191,6 +186,11 @@ page_fault(struct intr_frame *f)
         f->eip = (void *)eaxCopy; // do you need to cast this to void eip is a void pointer
     }
 
+    printf("Page fault at %p: %s error %s page in %s context.\n",
+           fault_addr,
+           not_present ? "not present" : "rights violation",
+           write ? "writing" : "reading",
+           user ? "user" : "kernel");
     /* To implement virtual memory, delete the rest of the function
      * body, and replace it with code that brings in the page to
      * which fault_addr refers. */
