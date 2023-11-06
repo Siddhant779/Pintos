@@ -10,57 +10,7 @@
 #include "pagedir.h"
 #include "process.h"
 #include "exception.h"
-/*
-static void
-check_user (const uint8_t *uaddr) {
-  // check uaddr range or segfaults
-  if(get_user (uaddr) == -1)
-    fail_invalid_access();
-}
-
-static int32_t
-get_user (const uint8_t *uaddr) {
-  // check that a user pointer `uaddr` points below PHYS_BASE
-  if (! ((void*)uaddr < PHYS_BASE)) {
-    return -1;
-  }
-
-  // as suggested in the reference manual, see (3.1.5)
-  int result;
-  asm ("movl $1f, %0; movzbl %1, %0; 1:"
-      : "=&a" (result) : "m" (*uaddr));
-  return result;
-}
-
-static int
-memread_user (void *src, void *dst, size_t bytes)
-{
-  int32_t value;
-  size_t i;
-  for(i=0; i<bytes; i++) {
-    value = get_user(src + i);
-    if(value == -1) // segfault or invalid memory access
-      fail_invalid_access();
-
-    *(char*)(dst + i) = value & 0xff;
-  }
-  return (int)bytes;
-}
-
- memread_user(f->esp + 4, &fd, sizeof(fd));
-      memread_user(f->esp + 8, &buffer, sizeof(buffer));
-      memread_user(f->esp + 12, &size, sizeof(size));
-
-      return_code = sys_write(fd, buffer, size);
-      f->eax = (uint32_t) return_code;
-      break;
-
-
-int sys_write(int fd, const void *buffer, unsigned size) {
-  // memory validation : [buffer+0, buffer+size) should be all valid
-  check_user((const uint8_t*) buffer);
-  check_user((const uint8_t*) buffer + size - 1);
-*/
+#include "vm/frame.h"
 
 
 bool sys_lock_init = false;
@@ -84,6 +34,28 @@ int syscall_wait (pid_t pid);
 // void valid_ptr(void *v_ptr);
 bool syscall_create(const char* file_name, unsigned starting_size);
 
+void pinning_pages(const void *buffer, size_t size) {
+  struct SPT *suppt = thread_current()->SuppT;
+  uint32_t *pagedir = thread_current()->pagedir;
+  void *upage;
+  for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
+    load_page(suppt,pagedir, upage);
+    frame_by_upage(suppt, upage, true);
+  }
+}
+
+void no_pinning_pages(const void *buffer, size_t size) {
+  struct SPT *suppt = thread_current()->SuppT;
+  void *upage;
+  for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
+    frame_by_upage(suppt, upage, false);
+  }
+}
+// static void 
+// check_get_user(const uint8_t *uaddr) {
+//   valid_ptr((void *) uaddr);
+//   get_user(uaddr);
+// }
 // this code get_user was provided by the pintos documentation
 /* Reads a byte at user virtual address UADDR.
    UADDR must be below PHYS_BASE.
@@ -125,6 +97,8 @@ check_addy(const uint8_t *addr, struct intr_frame *f, bool write) {
       }
     }
   }
+  struct thread *t = thread_current();
+  //frame_by_upage(t->SuppT, pg_round_down(addr),true);
 }
 
 int syscall_wait (pid_t pid) {
@@ -134,8 +108,8 @@ int syscall_wait (pid_t pid) {
 
 //returns the size 
 int syscall_write (int fd, const void *buffer, unsigned size, struct intr_frame *f) {
-  //check_addy((const uint8_t *) buffer, f, true);
-  //check_addy((const uint8_t *) buffer + size - 1, f, true);
+  check_addy((const uint8_t *) buffer, f, false);
+  check_addy((const uint8_t *) buffer + size - 1, f, false);
   if (size <= 0)
     {
       //if the size of what we are writing to hte file is under 1 then return the value back and dont write 
@@ -160,16 +134,18 @@ int syscall_write (int fd, const void *buffer, unsigned size, struct intr_frame 
       lock_release(&sys_lock);
       return -1;
     }
+    //pinning_pages(buffer, size);
     //get the size of how many bytes were written - called a function in file.c
     int size_write = file_write(file_pointer, buffer, size); 
+    //no_pinning_pages(buffer, size);
     //release lock here
     lock_release(&sys_lock);
     return size_write;
 }
 
 int syscall_read (int fd, void *buffer, unsigned size, struct intr_frame *f) {
-  //check_addy((const uint8_t *)buffer, f, false);
-  //check_addy((const uint8_t *)buffer + size -1, f, false);
+  check_addy((const uint8_t *)buffer, f, true);
+  check_addy((const uint8_t *)buffer + size -1, f, true);
   if (size <= 0) {
     // can't read less than one character so just return the size back 
     return size;
@@ -195,9 +171,11 @@ int syscall_read (int fd, void *buffer, unsigned size, struct intr_frame *f) {
     lock_release(&sys_lock);
     return -1;
   }
+  //pinning_pages(buffer, size);
   //reads the file - a function in file.c 
   int size_read = file_read(file_pointer, buffer, size);
   //release the lock here 
+  //no_pinning_pages(buffer, size);
   lock_release(&sys_lock);
   return size_read;
 
@@ -548,7 +526,6 @@ syscall_handler(struct intr_frame *f UNUSED)
       for(int i = 0; i < size; i++) {
         check_addy((const uint8_t *)buffer+i,f,true);
       }
-
       return_code = syscall_read(fd, buffer, size,f);
       f->eax = (uint32_t) return_code;
 
@@ -615,10 +592,11 @@ syscall_handler(struct intr_frame *f UNUSED)
       memory_copy(f->esp + 4, &fd, sizeof(fd));
       memory_copy(f->esp + 8, &buffer, sizeof(buffer));
       memory_copy(f->esp + 12, &size, sizeof(size));
+      struct thread *t = thread_current();
+      void *upage = (void *)buffer;
       for(int i = 0; i < size; i++) {
         check_addy((const uint8_t *)buffer+i,f,false);
       }
-
       return_code = syscall_write(fd, buffer, size, f);
       f->eax = (uint32_t) return_code;
       //frame_pinning(kpage, false); 

@@ -62,7 +62,7 @@ bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *u
   
 }
 
-bool SPTE_install_file_setup_stack(struct SPT *SuT, uint8_t *upage, uint8_t *kpage, bool writeable)
+bool SPTE_install_frame_setup_stack(struct SPT *SuT, uint8_t *upage, uint8_t *kpage, bool writeable)
 {
   struct SPTE *spte = (struct SPTE *) malloc(sizeof(struct SPTE));
   spte->upage = upage;
@@ -104,6 +104,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   struct SPTE *spte;
   spte = lookup_page(SuT, upage);
   if(spte == NULL) {
+    //printf("first one error\n");
     return false;
   }
 
@@ -113,6 +114,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
 
   void *frame_page = get_frame (spte, PAL_USER);
   if(frame_page == NULL) {
+    //printf("second one error\n");
     return false;
   }
    bool writeable2 = true;
@@ -139,6 +141,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
       //free the frame here - using frame_page 
       palloc_free_page(spte->kpage);
       //printf("this is freeing up the page\n");
+      //printf("third one error\n");
       return false;
     }
 

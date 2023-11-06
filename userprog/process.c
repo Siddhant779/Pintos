@@ -143,9 +143,9 @@ process_exit(void)
     struct thread *cur = thread_current();
     uint32_t *pd;
 
-    lock_acquire(&sys_lock);
+    //lock_acquire(&sys_lock);
     file_close(cur->file);
-    lock_release(&sys_lock);
+    //lock_release(&sys_lock);
     sema_up(&cur->thread_dying); //get status reaped
     sema_down(&cur->thread_dead); //wait to continue dying after status gets reaped
     /* Destroy the current process's page directory and switch back
@@ -520,7 +520,7 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     //kpage = palloc_get_page(PAL_USER | PAL_ZERO); //Grabs user page from memory (zeroed out)
     if (kpage != NULL) {
         success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true); //If successful, install page
-        success = success && SPTE_install_file_setup_stack(t->SuppT, spte.upage, kpage, true);
+        success = success && SPTE_install_frame_setup_stack(t->SuppT, spte.upage, kpage, true);
         if (success) {
             *esp = PHYS_BASE; //Sets to start of stack
               //printf("this is the upage in process.c %p\n", spte.upage);
