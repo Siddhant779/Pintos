@@ -39,17 +39,19 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     if(idx != BITMAP_ERROR) {
         k_page = palloc_get_page(PAL_USER | flags);
         frame_table[idx].kpage = k_page;
+        // you dont really need to set new_page->kpage to anything
         new_page->kpage = frame_table[idx].kpage;
     }
     else if(idx == BITMAP_ERROR) {
         idx = evict_frame(thread_current()->pagedir); // updating the old SPTE should be automatically handled during eviction
-        hi_test++;
-        idx = hi_test %367;
-        if(idx == 0 || 4 || 6) {
-            idx++;
-        }
-        printf("this is the idx %d\n", idx);
-        pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
+        // hi_test++;
+        // idx = hi_test %367;
+        // if(idx == 0 || 4 || 6) {
+        //     idx++;
+        // }
+         idx = 40;
+        //printf("this is the idx %d\n", idx);
+        //pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
         bool is_dirty_page = false;
         frame_table[idx].pinned = false;
         is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->kpage);
@@ -57,13 +59,14 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
             //put it in to swapArea
             int swap_idx = putInSwapArea(frame_table[idx].kpage);
             SPTE_set_swap(thread_current()->SuppT, frame_table[idx].upage, swap_idx);
-            pagedir_set_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage, true);
-            frame_table[idx].page_entry->swap_idx = swap_idx;
+            //pagedir_set_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage, true);
             freeUpFrame(frame_table[idx].kpage);
+            pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
             palloc_free_page(frame_table[idx].kpage);
         }
         else{
             freeUpFrame(frame_table[idx].kpage);
+            pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
             palloc_free_page(frame_table[idx].kpage);
 
         }
@@ -78,11 +81,10 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         //within the evict frame or here you actually remove the page - need to malloc for each frame then
     }
     struct FTE_hash *f = malloc(sizeof(struct FTE_hash)); // frame you wish to store the new page in
-    //frame_table[idx] = *f;
-    //new_page->kpage = k_page;
     frame_table[idx].upage = new_page->upage;
     frame_table[idx].thr = thread_current();
     frame_table[idx].page_entry = new_page;
+
     //frame_table[idx].pinned = true;
     f->index = idx;
     f->kpage = k_page;
@@ -92,8 +94,7 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     //install_page(new_page->upage, f->frame, new_page->writeable); //install new page
      //update new SPT
     lock_release(&frame_lock);
-    return new_page->kpage;
-    //return k_page;
+    return k_page;
 }
 void freeUpFrame(void *kpage) {
     // this is going to be used for freeing up frames that are not dirty
@@ -200,14 +201,14 @@ int evict_frame(uint32_t *pagedir) {
     //     } while(i != evict_start);
     // }
     for(i = evict_start; i < FRAME_NUM * 2; i++) {
-        if(i !=0 || i !=367){
-            if(pagedir_is_accessed(pagedir, frame_table[i].upage)){
-                pagedir_set_accessed(pagedir, frame_table[i].upage, false);
-            }
-            else {
-                evicted = i;
-                break;
-            }
+        if(i !=0 && i !=367 && i!=368){
+                if(pagedir_is_accessed(pagedir, frame_table[i].upage)){
+                    pagedir_set_accessed(pagedir, frame_table[i].upage, false);
+                }
+                else {
+                    evicted = i;
+                    break;
+                }
         }
     }
     void* newArea = NULL;
@@ -227,7 +228,7 @@ int evict_frame(uint32_t *pagedir) {
     evicted = evicted %FRAME_NUM;
     // remove association between frame and evicted SPTE
     struct SPTE *old_page = frame_table[evicted].page_entry; // SPTE of old page associated to the frame
-    old_page->kpage = newArea; 
+    //old_page->kpage = newArea; 
 
     evict_start = (evicted + 1) % FRAME_NUM; //update evict_start
     return evicted; //return the frame index of the page you evicted

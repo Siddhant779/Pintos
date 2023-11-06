@@ -171,11 +171,11 @@ int syscall_read (int fd, void *buffer, unsigned size, struct intr_frame *f) {
     lock_release(&sys_lock);
     return -1;
   }
-  //pinning_pages(buffer, size);
+  pinning_pages(buffer, size);
   //reads the file - a function in file.c 
   int size_read = file_read(file_pointer, buffer, size);
   //release the lock here 
-  //no_pinning_pages(buffer, size);
+  no_pinning_pages(buffer, size);
   lock_release(&sys_lock);
   return size_read;
 

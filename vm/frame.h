@@ -15,11 +15,8 @@ struct FTE {
     uint32_t index;
     void *upage;
     void *kpage; //pointer to the actual "frame" of data itself
-    struct list_elem processes; //list of processes associated with the frame
     struct SPTE *page_entry; //pointer to page table entry associated to the frame
     struct thread *thr;
-
-    struct hash_elem frame_elem;
     bool pinned; // this is something we need for the eviction alogorithm - if a pin is framed that means we shouldn't remove it 
 };
 

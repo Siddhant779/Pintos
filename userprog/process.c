@@ -516,6 +516,7 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     struct thread *t = thread_current();
     spte.upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
     //printf("setupstack.c : upage %p\n", spte.upage);
+    //frame_by_upage(t->SuppT, spte.upage, true);
     kpage = get_frame(&spte, PAL_USER | PAL_ZERO);
     //kpage = palloc_get_page(PAL_USER | PAL_ZERO); //Grabs user page from memory (zeroed out)
     if (kpage != NULL) {
