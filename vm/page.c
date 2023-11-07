@@ -19,6 +19,7 @@ struct SPT* SPT_init(void) {
 static unsigned SPT_hash_func(const struct hash_elem *e, void *aux) {
   struct SPTE *entry = hash_entry(e, struct SPTE, SPTE_hash_elem);
   return hash_bytes(&entry->upage, sizeof(entry->upage));
+  //return hash_int((int)entry->upage);
 }
 
 static bool SPT_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
