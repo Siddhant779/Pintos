@@ -34,6 +34,9 @@ static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, 
  *     - should be in memory */
 void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     lock_acquire(&frame_lock);
+    if(new_page->upage == 0xc002df4c){
+        printf("here check here\n");
+    }
     void *k_page;
     size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false); // returns index of first valid frame, returns BITMAP_ERROR if none
     if(idx != BITMAP_ERROR) {
@@ -49,6 +52,9 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         // if(idx == 0 || 4 || 6) {
         //     idx++;
         // }
+        if(idx == 145 || idx == 146) {
+            idx = 148;
+        }
         //idx = 40;
         printf("this is the idx %d\n", idx);
         //pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
@@ -57,6 +63,7 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->kpage);
         if(is_dirty_page) {
             //put it in to swapArea
+            printf("this is in the swap index\n");
             int swap_idx = putInSwapArea(frame_table[idx].kpage);
             SPTE_set_swap(thread_current()->SuppT, frame_table[idx].upage, swap_idx);
             //pagedir_set_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage, true);
@@ -65,7 +72,7 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
             palloc_free_page(frame_table[idx].kpage);
         }
         else{
-            freeUpFrame(frame_table[idx].kpage);
+            printf("this is evicting index\n");
             pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
             palloc_free_page(frame_table[idx].kpage);
 
@@ -118,6 +125,7 @@ void SPTE_set_swap(struct SPT *supT, void *upage, int swap_idx) {
     supTe->swap_idx = swap_idx;
     supTe->page_stat = SWAP;
     supTe->kpage == NULL;
+    supTe->pinned = false;
     //lock_release(&frame_lock);
 }
 void frame_init() {
@@ -200,12 +208,12 @@ int evict_frame(uint32_t *pagedir) {
     //         i = (i + 1) % FRAME_NUM;
     //     } while(i != evict_start);
     // }
-    for(i = evict_start; i < FRAME_NUM ; i++) {
+    for(i = evict_start; i < FRAME_NUM *2 ; i++) {
         //if(i !=0 && i !=367 && i!=368){
             //printf("frame table pinned : %d\n and idx : %d", frame_table[i].page_entry->pinned, i);
         int real_index = i%367;
         if(frame_table[real_index].page_entry->pinned == false){
-            printf("this is not pinned idx : %d\n", real_index);
+            //printf("this is not pinned idx : %d\n", real_index);
                 if(pagedir_is_accessed(pagedir, frame_table[real_index].upage)){
                     pagedir_set_accessed(pagedir, frame_table[real_index].upage, false);
                 }
@@ -215,18 +223,8 @@ int evict_frame(uint32_t *pagedir) {
             }
         }
     }
+    printf("eviction gave %d\n", evicted);
     void* newArea = NULL;
-    
-    // if no frame was neither accessed nor dirty, evict a non-dirty frame
-    // if(evicted == -1) {
-    //     evicted = clean;
-    //     //if all frames are dirty, evict a random frame and swap the page to SWAP SPACE
-    //     if(evicted == -1) {
-    //         evicted = 40;
-    //         //evicted = 30; //evict some random frame
-    //         //newArea = putInSwapArea(frame_table[evicted].frame); //place old frame data into swap space
-    //     }
-    // }
     if(evicted == -1){
         evicted = 40;
     }
