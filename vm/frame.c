@@ -36,9 +36,6 @@ static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, 
  *     - should be in memory */
 void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     lock_acquire(&frame_lock);
-    if(new_page->upage == 0xc002df4c){
-        printf("here check here\n");
-    }
     void *k_page;
     size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false); // returns index of first valid frame, returns BITMAP_ERROR if none
     if(idx != BITMAP_ERROR) {
