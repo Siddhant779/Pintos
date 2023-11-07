@@ -514,6 +514,7 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     log(L_TRACE, "setup_stack()");
     struct SPTE spte;
     struct thread *t = thread_current();
+    spte.pinned = true;
     spte.upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
     //printf("setupstack.c : upage %p\n", spte.upage);
     //frame_by_upage(t->SuppT, spte.upage, true);

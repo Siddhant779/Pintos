@@ -49,8 +49,8 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         // if(idx == 0 || 4 || 6) {
         //     idx++;
         // }
-         idx = 40;
-        //printf("this is the idx %d\n", idx);
+        //idx = 40;
+        printf("this is the idx %d\n", idx);
         //pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
         bool is_dirty_page = false;
         frame_table[idx].pinned = false;
@@ -200,28 +200,35 @@ int evict_frame(uint32_t *pagedir) {
     //         i = (i + 1) % FRAME_NUM;
     //     } while(i != evict_start);
     // }
-    for(i = evict_start; i < FRAME_NUM * 2; i++) {
-        if(i !=0 && i !=367 && i!=368){
-                if(pagedir_is_accessed(pagedir, frame_table[i].upage)){
-                    pagedir_set_accessed(pagedir, frame_table[i].upage, false);
+    for(i = evict_start; i < FRAME_NUM ; i++) {
+        //if(i !=0 && i !=367 && i!=368){
+            //printf("frame table pinned : %d\n and idx : %d", frame_table[i].page_entry->pinned, i);
+        int real_index = i%367;
+        if(frame_table[real_index].page_entry->pinned == false){
+            printf("this is not pinned idx : %d\n", real_index);
+                if(pagedir_is_accessed(pagedir, frame_table[real_index].upage)){
+                    pagedir_set_accessed(pagedir, frame_table[real_index].upage, false);
                 }
                 else {
                     evicted = i;
                     break;
-                }
+            }
         }
     }
     void* newArea = NULL;
     
     // if no frame was neither accessed nor dirty, evict a non-dirty frame
-    if(evicted == -1) {
-        evicted = clean;
-        //if all frames are dirty, evict a random frame and swap the page to SWAP SPACE
-        if(evicted == -1) {
-            evicted = 40;
-            //evicted = 30; //evict some random frame
-            //newArea = putInSwapArea(frame_table[evicted].frame); //place old frame data into swap space
-        }
+    // if(evicted == -1) {
+    //     evicted = clean;
+    //     //if all frames are dirty, evict a random frame and swap the page to SWAP SPACE
+    //     if(evicted == -1) {
+    //         evicted = 40;
+    //         //evicted = 30; //evict some random frame
+    //         //newArea = putInSwapArea(frame_table[evicted].frame); //place old frame data into swap space
+    //     }
+    // }
+    if(evicted == -1){
+        evicted = 40;
     }
     
     // may need to write frame data to disk but not sure how to do this

@@ -51,6 +51,7 @@ bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *u
   spte->page_zero_bytes = zero_bytes;
   spte->writeable = writable;
   spte->page_stat = IN_FILE;
+  spte->pinned = false;
 
   struct hash_elem *elem_exist;
   elem_exist = hash_insert(&SuT->page_entries, &spte->SPTE_hash_elem);
@@ -69,6 +70,7 @@ bool SPTE_install_frame_setup_stack(struct SPT *SuT, uint8_t *upage, uint8_t *kp
   spte->kpage = kpage;
   spte->page_stat = FRAME;
   spte->writeable = writeable;
+  spte->pinned = true;
 
   struct hash_elem *elem_exist;
   elem_exist = hash_insert(&SuT->page_entries, &spte->SPTE_hash_elem);
