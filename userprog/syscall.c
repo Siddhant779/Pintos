@@ -39,9 +39,10 @@ void pinning_pages(const void *buffer, size_t size) {
   struct SPT *suppt = thread_current()->SuppT;
   uint32_t *pagedir = thread_current()->pagedir;
   void *upage;
-  for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
-    load_page(suppt,pagedir, upage);
-    struct SPTE* temp = lookup_page(suppt, upage);
+  for(upage = pg_round_down(buffer); upage < buffer + size; upage++) {
+    void *upage2 = pg_round_down(upage);
+    load_page(suppt,pagedir, upage2);
+    struct SPTE* temp = lookup_page(suppt, upage2);
     temp->pinned = true;
     // frame_by_upage(suppt, upage, true);
 
@@ -53,7 +54,8 @@ void no_pinning_pages(const void *buffer, size_t size) {
   void *upage;
   for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
     //frame_by_upage(suppt, upage, false);
-    struct SPTE* temp = lookup_page(suppt, upage);
+    void *upage2 = pg_round_down(upage);
+    struct SPTE* temp = lookup_page(suppt, upage2);
     temp->pinned = true;
   }
 }

@@ -512,17 +512,18 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     bool success = false;
 
     log(L_TRACE, "setup_stack()");
-    struct SPTE spte;
+    struct SPTE *spte = (struct SPTE *) malloc(sizeof(struct SPTE));
     struct thread *t = thread_current();
-    spte.pinned = true;
-    spte.upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
-    //printf("setupstack.c : upage %p\n", spte.upage);
-    //frame_by_upage(t->SuppT, spte.upage, true);
-    kpage = get_frame(&spte, PAL_USER | PAL_ZERO);
-    //kpage = palloc_get_page(PAL_USER | PAL_ZERO); //Grabs user page from memory (zeroed out)
+    spte->pinned = true;
+    spte->upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
+    spte->page_stat = FRAME;
+    spte->writeable = true;
+    struct hash_elem *elem_exist;
+    elem_exist = hash_insert(&(t->SuppT->page_entries), &spte->SPTE_hash_elem);
+    kpage = get_frame(spte, PAL_USER | PAL_ZERO);
     if (kpage != NULL) {
         success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true); //If successful, install page
-        success = success && SPTE_install_frame_setup_stack(t->SuppT, spte.upage, kpage, true);
+        //success = success && SPTE_install_frame_setup_stack(t->SuppT, spte.upage, kpage, true);
         if (success) {
             *esp = PHYS_BASE; //Sets to start of stack
               //printf("this is the upage in process.c %p\n", spte.upage);
