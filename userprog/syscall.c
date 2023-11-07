@@ -39,7 +39,7 @@ void pinning_pages(const void *buffer, size_t size) {
   struct SPT *suppt = thread_current()->SuppT;
   uint32_t *pagedir = thread_current()->pagedir;
   void *upage;
-  for(upage = pg_round_down(buffer); upage < buffer + size; upage++) {
+  for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
     void *upage2 = pg_round_down(upage);
     load_page(suppt,pagedir, upage2);
     struct SPTE* temp = lookup_page(suppt, upage2);
