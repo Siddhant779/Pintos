@@ -11,6 +11,7 @@
 #include "process.h"
 #include "exception.h"
 #include "vm/frame.h"
+#include "vm/page.h"
 
 
 bool sys_lock_init = false;
@@ -40,7 +41,10 @@ void pinning_pages(const void *buffer, size_t size) {
   void *upage;
   for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
     load_page(suppt,pagedir, upage);
-    frame_by_upage(suppt, upage, true);
+    struct SPTE* temp = lookup_page(suppt, upage);
+    temp->pinned = true;
+    // frame_by_upage(suppt, upage, true);
+
   }
 }
 
@@ -48,7 +52,9 @@ void no_pinning_pages(const void *buffer, size_t size) {
   struct SPT *suppt = thread_current()->SuppT;
   void *upage;
   for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
-    frame_by_upage(suppt, upage, false);
+    //frame_by_upage(suppt, upage, false);
+    struct SPTE* temp = lookup_page(suppt, upage);
+    temp->pinned = true;
   }
 }
 // static void 
@@ -134,10 +140,10 @@ int syscall_write (int fd, const void *buffer, unsigned size, struct intr_frame 
       lock_release(&sys_lock);
       return -1;
     }
-    //pinning_pages(buffer, size);
+    pinning_pages(buffer, size);
     //get the size of how many bytes were written - called a function in file.c
     int size_write = file_write(file_pointer, buffer, size); 
-    //no_pinning_pages(buffer, size);
+    no_pinning_pages(buffer, size);
     //release lock here
     lock_release(&sys_lock);
     return size_write;
