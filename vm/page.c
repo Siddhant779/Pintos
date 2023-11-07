@@ -18,7 +18,7 @@ struct SPT* SPT_init(void) {
 
 static unsigned SPT_hash_func(const struct hash_elem *e, void *aux) {
   struct SPTE *entry = hash_entry(e, struct SPTE, SPTE_hash_elem);
-  return hash_int( (int)entry->upage );
+  return hash_bytes(&entry->upage, sizeof(entry->upage));
 }
 
 static bool SPT_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
@@ -70,7 +70,6 @@ bool SPTE_install_frame_setup_stack(struct SPT *SuT, uint8_t *upage, uint8_t *kp
   spte->kpage = kpage;
   spte->page_stat = FRAME;
   spte->writeable = writeable;
-  spte->pinned = true;
 
   struct hash_elem *elem_exist;
   elem_exist = hash_insert(&SuT->page_entries, &spte->SPTE_hash_elem);
@@ -125,6 +124,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     // do nothing i think 
   }
   else if(spte->page_stat == SWAP) {
+    //printf("getting from swap area\n");
     getFromSwapArea(spte->swap_idx, frame_page);
   }
   else if(spte->page_stat == ALL_ZERO) {
