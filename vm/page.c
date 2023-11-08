@@ -13,7 +13,8 @@ static unsigned SPT_hash_func(const struct hash_elem *e, void *aux);
 static bool SPT_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
 
 struct SPT* SPT_init(void) {
-    struct SPT *SPT = (struct SPT*) malloc(sizeof(struct SPT));
+  lock_init(&spte_lock);
+  struct SPT *SPT = (struct SPT*) malloc(sizeof(struct SPT));
 
   hash_init (&SPT->page_entries, SPT_hash_func, SPT_less_func, NULL);
   return SPT;
@@ -44,7 +45,7 @@ lookup_page(struct SPT *suppt, void *upage){
   if(elem == NULL) return NULL;
   return hash_entry(elem, struct SPTE, SPTE_hash_elem);
 }
-bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable)
+bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable, uint32_t *pagedir, struct thread *t)
 {
   struct SPTE *spte = (struct SPTE *) malloc(sizeof(struct SPTE));
   spte->file = file;
@@ -56,6 +57,8 @@ bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *u
   spte->writeable = writable;
   spte->page_stat = IN_FILE;
   spte->pinned = false;
+  spte->pagedir = pagedir;
+  spte->curr = t;
 
   struct hash_elem *elem_exist;
   elem_exist = hash_insert(&SuT->page_entries, &spte->SPTE_hash_elem);
@@ -85,7 +88,7 @@ bool SPTE_install_frame_setup_stack(struct SPT *SuT, uint8_t *upage, uint8_t *kp
   
 }
 
-bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage)
+bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage, uint32_t *pagedir, struct thread *t)
 {
   struct SPTE *spte;
   spte = (struct SPTE *) malloc(sizeof(struct SPTE));
@@ -93,6 +96,8 @@ bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage)
   spte->upage = upage;
   spte->kpage = NULL;
   spte->page_stat = ALL_ZERO;
+  spte->pagedir = pagedir;
+  spte->curr = t;
 
   struct hash_elem *prev_elem;
   prev_elem = hash_insert (&SuT->page_entries, &spte->SPTE_hash_elem);
@@ -106,20 +111,38 @@ bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage)
 
 // this is the main function for loading the page for the address upage 
 bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
+  struct thread *t = thread_current();
+  lock_acquire(&t->spt_lock);
   struct SPTE *spte;
   spte = lookup_page(SuT, upage);
+  //USE THE FILESYS LOCK INSTEAD OF SPT HERE - THEN FOR EACH CHANGE FOR SPTE USE THE SPTE LOCK 
+  //- THIS IS WITHIN HERE AND THE SPTE FUCNTIONS IN FRAME.C 
   if(spte == NULL) {
     //printf("first one error\n");
+    lock_release(&t->spt_lock);
     return false;
   }
 
   if(spte->page_stat == FRAME) {
+    lock_release(&t->spt_lock);
     return true;
   }
 
   void *frame_page = get_frame (spte, PAL_USER);
+  spte = lookup_page(SuT, upage);
+  if(spte == NULL) {
+    //printf("first one error\n");
+    lock_release(&t->spt_lock);
+    return false;
+  }
+
+  if(spte->page_stat == FRAME) {
+    lock_release(&t->spt_lock);
+    return true;
+  }
   if(frame_page == NULL) {
     //printf("second one error\n");
+    lock_release(&t->spt_lock);
     return false;
   }
    bool writeable2 = true;
@@ -135,6 +158,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     pagedir_set_dirty(pagedir, spte->upage, true);
     spte->page_stat = FRAME;
     spte->kpage = frame_page;
+    lock_release(&t->spt_lock);
     return true;
     
   }
@@ -151,10 +175,8 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     lock_release(&sys_lock);
 
     if(read_byte != (int)page_read_bytes) {
-      //free the frame here - using frame_page 
       palloc_free_page(spte->kpage);
-      //printf("this is freeing up the page\n");
-      //printf("third one error\n");
+      lock_release(&t->spt_lock);
       return false;
     }
 
@@ -172,6 +194,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
       //free the frame need to maek code for that -- this just means free up the frame 
       palloc_free_page(spte->kpage);
       //printf("this is freeing up the page\n");
+      //lock_release(&t->spt_lock);
       return false;
     }
 
@@ -180,7 +203,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
 
     pagedir_set_dirty(pagedir, frame_page, false);
 
-
+    lock_release(&t->spt_lock);
     return true;
 
 

@@ -143,9 +143,9 @@ process_exit(void)
     struct thread *cur = thread_current();
     uint32_t *pd;
 
-    //lock_acquire(&sys_lock);
+    lock_acquire(&sys_lock);
     file_close(cur->file);
-    //lock_release(&sys_lock);
+    lock_release(&sys_lock);
     sema_up(&cur->thread_dying); //get status reaped
     sema_down(&cur->thread_dead); //wait to continue dying after status gets reaped
     /* Destroy the current process's page directory and switch back
@@ -483,7 +483,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         /* Advance. */
        struct thread *current = thread_current();
        ASSERT(pagedir_get_page(current->pagedir, upage) == NULL);
-       bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, read_bytes, zero_bytes, writable);
+       bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, read_bytes, zero_bytes, writable, current->pagedir, thread_current());
        if(condition_install == false) {
             return false;
         }
@@ -518,6 +518,8 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     spte->upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
     spte->page_stat = FRAME;
     spte->writeable = true;
+    spte->pagedir = t->pagedir;
+    spte->curr = thread_current();
     struct hash_elem *elem_exist;
     elem_exist = hash_insert(&(t->SuppT->page_entries), &spte->SPTE_hash_elem);
     kpage = get_frame(spte, PAL_USER | PAL_ZERO);
