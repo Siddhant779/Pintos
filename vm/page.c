@@ -2,6 +2,9 @@
 #include <string.h>
 #include "page.h"
 #include "swap.h"
+#include "userprog/process.h"
+#include "userprog/pagedir.h"
+
 
 
 
@@ -126,7 +129,14 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   }
   else if(spte->page_stat == SWAP) {
     //printf("getting from swap area\n");
+    //printf("get from swap area");
     getFromSwapArea(spte->swap_idx, frame_page);
+    install_page(spte->upage,spte->kpage, spte->writeable);
+    pagedir_set_dirty(pagedir, spte->upage, true);
+    spte->page_stat = FRAME;
+    spte->kpage = frame_page;
+    return true;
+    
   }
   else if(spte->page_stat == ALL_ZERO) {
     memset(frame_page, 0, PGSIZE);
@@ -161,7 +171,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     if(!status) {
       //free the frame need to maek code for that -- this just means free up the frame 
       palloc_free_page(spte->kpage);
-      printf("this is freeing up the page\n");
+      //printf("this is freeing up the page\n");
       return false;
     }
 
