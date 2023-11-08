@@ -137,6 +137,10 @@ page_fault(struct intr_frame *f)
      * (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
+    bool has_sys_lock = lock_held_by_current_thread(&sys_lock);
+    if(has_sys_lock){
+        lock_release(&sys_lock);
+    }
    /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */
     intr_enable();
@@ -164,7 +168,7 @@ page_fault(struct intr_frame *f)
         // says that the stack size is 8 MB so thats why i did 0x800000
             if ((esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32 ) && (fault_addr < PHYS_BASE && PHYS_BASE - 0x800000 <= fault_addr)) {
                 //printf("in the stack growth part \n");
-                SPTE_install_zeropage (curr->SuppT, fault_page);
+                SPTE_install_zeropage (curr->SuppT, fault_page, curr->pagedir, thread_current());
             }
         }
     //printf("exception.c : upage %p\n", fault_page);
@@ -175,10 +179,17 @@ page_fault(struct intr_frame *f)
             }
         }
     } 
+    if(has_sys_lock) {
+        lock_acquire(&sys_lock);
+    }
     return;
 
     //Set eax and sets the former value into eip
     PAGE_FAULT_ERROR:
+
+    if(has_sys_lock) {
+        lock_acquire(&sys_lock);
+    }
 
     if(!user) {
         int eaxCopy = f->eax;

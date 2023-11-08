@@ -40,74 +40,45 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     size_t idx = bitmap_scan_and_flip(frame_map, 0, 1, false); // returns index of first valid frame, returns BITMAP_ERROR if none
     if(idx != BITMAP_ERROR) {
         k_page = palloc_get_page(PAL_USER | flags);
-        //frame_table[idx].kpage = k_page;
-        // you dont really need to set new_page->kpage to anything
         new_page->kpage = k_page;
     }
     else if(idx == BITMAP_ERROR) {
         idx = evict_frame(thread_current()->pagedir); // updating the old SPTE should be automatically handled during eviction
-        //idx = 40;
-        //printf("this is the idx %d\n", idx);
-        //pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
         bool is_dirty_page = false;
         frame_table[idx].pinned = false;
-        is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->kpage);
+        is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->kpage);
         if(is_dirty_page) {
-            //printf("swap slot put in");
-            //put it in to swapArea
-            //printf("this is in the swap index\n");
             int swap_idx = putInSwapArea(frame_table[idx].page_entry->kpage);
-            SPTE_set_swap(thread_current()->SuppT, frame_table[idx].page_entry->upage, swap_idx);
-            //pagedir_set_dirty(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage, true);
-            //freeUpFrame(frame_table[idx].page_entry->kpage);
-            pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
+            SPTE_set_swap(frame_table[idx].page_entry->curr->SuppT, frame_table[idx].page_entry->upage, swap_idx);
+            pagedir_set_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage, true);
+            pagedir_clear_page(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage);
             palloc_free_page(frame_table[idx].page_entry->kpage);
         }
         else{
-            //printf("this is evicting index\n");
-            SPTE_set_in_file(thread_current()->SuppT, frame_table[idx].page_entry->upage);
-            pagedir_clear_page(frame_table[idx].thr->pagedir, frame_table[idx].page_entry->upage);
+            SPTE_set_in_file(frame_table[idx].page_entry->curr->SuppT, frame_table[idx].page_entry->upage);
+            pagedir_clear_page(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage);
             palloc_free_page(frame_table[idx].page_entry->kpage);
 
         }
-        //need to set the SPTE to dirty and swap now ;
-        // you need some way for the SPTE to know that this is the swap index 
-        //remove from the hash here -we need the hash for pinning 
-        
-        // you arent putting k_page to naything here this part is wrong 
         k_page = palloc_get_page(PAL_USER | flags);
-        //rame_table[idx].kpage = k_page;
         new_page->kpage = k_page;
-        //within the evict frame or here you actually remove the page - need to malloc for each frame then
     }
     struct FTE_hash *f = malloc(sizeof(struct FTE_hash)); // frame you wish to store the new page in
-    //frame_table[idx].upage = new_page->upage;
     frame_table[idx].thr = thread_current();
     frame_table[idx].page_entry = new_page;
     f->index = idx;
     f->kpage = k_page;
     hash_insert(&frame_entries, &(f->frame_elem));
-
-
-    //install_page(new_page->upage, f->frame, new_page->writeable); //install new page
-     //update new SPT
     lock_release(&frame_lock);
     return k_page;
 }
-// void freeUpFrame(void *kpage) {
-//     // this is going to be used for freeing up frames that are not dirty
-//     struct FTE_hash *fte_temp;
-//     fte_temp->kpage = kpage;
-//     struct hash_elem *elem = hash_find(&frame_entries,&(fte_temp->frame_elem));
-//     if(elem == NULL) {
-//         printf("there is somethign wrong with program look into this ");
-//     }
-//     struct FTE_hash *fte_pin;
-//     fte_pin = hash_entry(elem, struct FTE_hash, frame_elem);
-//     hash_delete (&(frame_entries), &(fte_pin->frame_elem));
-// }
 void SPTE_set_swap(struct SPT *supT, void *upage, int swap_idx) {
-    //lock_acquire(&frame_lock);
+    // struct thread *t = thread_current();
+    // bool has_sys_lock = lock_held_by_current_thread(&t->spt_lock);
+    // if(has_sys_lock){
+    //     lock_release(&t->spt_lock);
+    // }
+    // lock_acquire(&t->spt_lock);
     struct SPTE *supTe;
     supTe = lookup_page(supT, upage);
     if(supTe == NULL) {
@@ -117,9 +88,18 @@ void SPTE_set_swap(struct SPT *supT, void *upage, int swap_idx) {
     supTe->page_stat = SWAP;
     supTe->kpage == NULL;
     supTe->pinned = false;
-    //lock_release(&frame_lock);
+    // lock_release(&t->spt_lock);
+    // if(has_sys_lock){
+    //     lock_acquire(&t->spt_lock);
+    // }
 }
 void SPTE_set_in_file(struct SPT *supT, void *upage) {
+    struct thread *t = thread_current();
+    // bool has_sys_lock = lock_held_by_current_thread(&t->spt_lock);
+    // if(has_sys_lock){
+    //     lock_release(&t->spt_lock);
+    // }
+    // lock_acquire(&t->spt_lock);
     struct SPTE *supTe;
     supTe = lookup_page(supT, upage);
     if(supTe == NULL) {
@@ -128,6 +108,10 @@ void SPTE_set_in_file(struct SPT *supT, void *upage) {
     supTe->page_stat = IN_FILE;
     supTe->kpage == NULL;
     supTe->pinned = false;
+    // lock_release(&t->spt_lock);
+    // if(has_sys_lock){
+    //     lock_acquire(&t->spt_lock);
+    // }
 }
 void frame_init() {
     lock_init(&frame_lock);
@@ -148,38 +132,13 @@ void frame_init() {
     hi_test = 1;
 
 }
-// void frame_by_upage(struct SPT *supT, void *upage, bool pinning) {
-//     struct SPTE *supTe;
-//     supTe = lookup_page(supT, upage);
-//     if(supTe == NULL) {
-//         return;
-//     }
-//     void *kpage = supTe->kpage;
-//     if(supTe->page_stat == FRAME) {
-//         frame_pinning(kpage, pinning);
-//     }
-// }
-// void frame_pinning(void *kpage, bool pin) {
-//     lock_acquire(&frame_lock);
-//     struct FTE_hash *fte_temp;
-//     fte_temp->kpage = kpage;
-//     struct hash_elem *elem = hash_find(&frame_entries,&(fte_temp->frame_elem));
-//     if(elem == NULL) {
-//         printf("there is somethign wrong with program look into this ");
-//     }
-//     struct FTE_hash *fte_pin;
-//     fte_pin = hash_entry(elem, struct FTE_hash, frame_elem);
-//     int index = fte_pin->index;
-//     frame_table[index]. pinned = pin;
-//     lock_release(&frame_lock);
-// }
 int evict_frame(uint32_t *pagedir) {
     int evicted = -1; // frame index of the frame you are evicting (not accessed and not dirty by default)
 
     struct thread *t = thread_current();
     int index = evict_start;
     while(true) {
-        if(!pagedir_is_accessed(t->pagedir, frame_table[index].page_entry->upage) && !frame_table[index].page_entry->pinned){
+        if(!pagedir_is_accessed(pagedir, frame_table[index].page_entry->upage) && !frame_table[index].page_entry->pinned){
             break;
         }
         pagedir_set_accessed(pagedir, frame_table[index].page_entry->upage, false);
