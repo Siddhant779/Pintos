@@ -45,7 +45,6 @@ void pinning_pages(const void *buffer, size_t size) {
     struct SPTE* temp = lookup_page(suppt, upage2);
     temp->pinned = true;
     // frame_by_upage(suppt, upage, true);
-
   }
 }
 
@@ -56,7 +55,7 @@ void no_pinning_pages(const void *buffer, size_t size) {
     //frame_by_upage(suppt, upage, false);
     void *upage2 = pg_round_down(upage);
     struct SPTE* temp = lookup_page(suppt, upage2);
-    temp->pinned = true;
+    temp->pinned = false;
   }
 }
 // static void 
