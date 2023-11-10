@@ -104,55 +104,6 @@ int evict_frame(uint32_t *pagedir) {
     return evicted;
 }
 
-//Function for swapping a frame with something on swap table
-// void* putInSwapArea(void* frame, size_t* index){
-//     //Get swap block (entire swap area 4MB)
-//     struct block* swapBlock = block_get_role(BLOCK_SWAP);
-
-//     //Get size of the whole swap area in units of sectors (Probably a very large number since the entire block device can store many sectors)
-//     block_sector_t blockSize = block_size(swapBlock);
-
-//     //Create bitmap of to track of all the swap slots in the swap area (each slot has 8 sectors)
-//     struct bitmap* slots = bitmap_create(blockSize/8); //num of slots (8 sectors per slot)
-
-//     //Read all slots in swap area, find a slot in swap area to put the frae
-//     size_t slotIndex = bitmap_scan_and_flip(slots, 0, 1, false); //Gives index of first free slot. It will find the first zero and flip it to one
-
-//     //Passes information to parameter about index of frame in the swap area
-//     *index = slotIndex;
-
-//     //Write to 8 sectors. This takes whatever data from frame and put it on the swap area
-//     for(int i = 0; i < 8; i++) {
-//         //Get where data input (buffer + offset)
-//         void* bufferRead = frame + BLOCK_SECTOR_SIZE * i;
-
-//         //Write data 
-//         block_write(swapBlock /*entire swap area*/, slotIndex * 8 + i /*sector is slot * 8 (8 sectors per slot) + i (offset)*/, bufferRead /*Information to write*/);
-//     }
-
-//     return frame;
-
-// }
-
-//Function for swapping a frame with something on swap table. When you put a page into swap area, SPTE should store the index of it so you can get it back later
-// void* getFromSwapArea(void* frame, size_t slotIndex){
-//     //Get swap block (entire swap area 4MB)
-//     struct block* swapBlock = block_get_role(BLOCK_SWAP);
-
-//     //Get size of the whole swap area in units of sectors (Probably a very large number since the entire block device can store many sectors)
-//     block_sector_t blockSize = block_size(swapBlock);
-
-//     //Read from 8 sectors so the frame can be obtained from swap area
-//     for(int i = 0; i < 8; i++){
-//         //Get where to read (buffer + offset)
-//         void* bufferRead = frame + BLOCK_SECTOR_SIZE * i;
-
-//         //Read data (not sure what the purpose of each parameter here is)
-//         block_read(swapBlock, slotIndex * 8 + 1, bufferRead);
-//     }
-//     return frame;
-// }
-
 //Frame is the actual physical memory, pages are the info that you want to put in frames. When you are using a page, it has to be in frame, or it can be in swap area
 void vm_frame_free(int index_frame) {
     
