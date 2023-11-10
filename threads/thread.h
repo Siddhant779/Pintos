@@ -95,10 +95,10 @@ struct thread {
     /* Shared between thread.c and synch.c. */
     struct list_elem elem; /* List element. */
 
-#ifdef USERPROG
+//#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir; /* Page directory. */
-#endif
+//#endif
 
     /* Owned by thread.c. */
     unsigned magic; /* Detects stack overflow. */  
@@ -119,6 +119,10 @@ struct thread {
 
     //Need 2 structs, one is hash and one is hash elem
     struct SPT *SuppT;
+
+    struct lock spt_lock;
+
+    void *esp;
     
 };
 

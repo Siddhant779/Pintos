@@ -137,6 +137,10 @@ page_fault(struct intr_frame *f)
      * (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
+    bool has_sys_lock = lock_held_by_current_thread(&sys_lock);
+    if(has_sys_lock){
+        lock_release(&sys_lock);
+    }
    /* Turn interrupts back on (they were only off so that we could
      * be assured of reading CR2 before it changed). */
     intr_enable();
@@ -148,25 +152,45 @@ page_fault(struct intr_frame *f)
     not_present = (f->error_code & PF_P) == 0;
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
-
+    
 
     struct thread *curr = thread_current();
     void *fault_page = (void *)pg_round_down(fault_addr);
-
-    if(not_present) {
-        if(!load_page(curr->SuppT, curr->pagedir, fault_page)) {
-            goto PAGE_FAULT_ERROR;
-        }
-    }
-    else if(!not_present){
+    //printf("fault page: %p");
+    if(!not_present) {
         goto PAGE_FAULT_ERROR;
     }
+    if(not_present) {
+        void *esp = user ? f->esp : curr ->esp;
 
-
+        struct SPTE *temp = lookup_page(curr->SuppT, fault_page);
+        if(temp == NULL) {
+        // says that the stack size is 8 MB so thats why i did 0x800000
+            if ((esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32 ) && (fault_addr < PHYS_BASE && PHYS_BASE - 0x800000 <= fault_addr)) {
+                //printf("in the stack growth part \n");
+                // printf("PAGE FAULT: Thread %d is growing the stack\n", curr->tid);
+                SPTE_install_zeropage (curr->SuppT, fault_page, curr->pagedir, thread_current());
+            }
+        }
+    //printf("exception.c : upage %p\n", fault_page);
+        if(not_present) {
+            if(!load_page(curr->SuppT, curr->pagedir, fault_page)) {
+                //printf("in the lazy loading part \n");
+                goto PAGE_FAULT_ERROR;
+            }
+        }
+    } 
+    if(has_sys_lock) {
+        lock_acquire(&sys_lock);
+    }
     return;
 
     //Set eax and sets the former value into eip
     PAGE_FAULT_ERROR:
+
+    if(has_sys_lock) {
+        lock_acquire(&sys_lock);
+    }
 
     if(!user) {
         int eaxCopy = f->eax;
@@ -174,15 +198,15 @@ page_fault(struct intr_frame *f)
         f->eip = (void *)eaxCopy; // do you need to cast this to void eip is a void pointer
     }
 
-    /* To implement virtual memory, delete the rest of the function
-     * body, and replace it with code that brings in the page to
-     * which fault_addr refers. */
-    // commented it out becuase its only for debugging 
     // printf("Page fault at %p: %s error %s page in %s context.\n",
     //        fault_addr,
     //        not_present ? "not present" : "rights violation",
     //        write ? "writing" : "reading",
     //        user ? "user" : "kernel");
+    /* To implement virtual memory, delete the rest of the function
+     * body, and replace it with code that brings in the page to
+     * which fault_addr refers. */
+    // commented it out becuase its only for debugging 
     //kill(f);
     syscall_exit(-1); // should it be negative 1???
     // call sysexit here 

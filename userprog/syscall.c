@@ -10,6 +10,9 @@
 #include "pagedir.h"
 #include "process.h"
 #include "exception.h"
+#include "vm/frame.h"
+#include "vm/page.h"
+
 
 bool sys_lock_init = false;
 
@@ -32,6 +35,34 @@ int syscall_wait (pid_t pid);
 // void valid_ptr(void *v_ptr);
 bool syscall_create(const char* file_name, unsigned starting_size);
 
+void pinning_pages(const void *buffer, size_t size) {
+  struct SPT *suppt = thread_current()->SuppT;
+  uint32_t *pagedir = thread_current()->pagedir;
+  void *upage;
+  for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
+    void *upage2 = pg_round_down(upage);
+    load_page(suppt,pagedir, upage2);
+    struct SPTE* temp = lookup_page(suppt, upage2);
+    temp->pinned = true;
+    // frame_by_upage(suppt, upage, true);
+  }
+}
+
+void no_pinning_pages(const void *buffer, size_t size) {
+  struct SPT *suppt = thread_current()->SuppT;
+  void *upage;
+  for(upage = pg_round_down(buffer); upage < buffer + size; upage+=PGSIZE) {
+    //frame_by_upage(suppt, upage, false);
+    void *upage2 = pg_round_down(upage);
+    struct SPTE* temp = lookup_page(suppt, upage2);
+    temp->pinned = false;
+  }
+}
+// static void 
+// check_get_user(const uint8_t *uaddr) {
+//   valid_ptr((void *) uaddr);
+//   get_user(uaddr);
+// }
 // this code get_user was provided by the pintos documentation
 /* Reads a byte at user virtual address UADDR.
    UADDR must be below PHYS_BASE.
@@ -73,6 +104,8 @@ check_addy(const uint8_t *addr, struct intr_frame *f, bool write) {
       }
     }
   }
+  struct thread *t = thread_current();
+  //frame_by_upage(t->SuppT, pg_round_down(addr),true);
 }
 
 int syscall_wait (pid_t pid) {
@@ -82,8 +115,8 @@ int syscall_wait (pid_t pid) {
 
 //returns the size 
 int syscall_write (int fd, const void *buffer, unsigned size, struct intr_frame *f) {
-  //check_addy((const uint8_t *) buffer, f, true);
-  //check_addy((const uint8_t *) buffer + size - 1, f, true);
+  check_addy((const uint8_t *) buffer, f, false);
+  check_addy((const uint8_t *) buffer + size - 1, f, false);
   if (size <= 0)
     {
       //if the size of what we are writing to hte file is under 1 then return the value back and dont write 
@@ -108,16 +141,18 @@ int syscall_write (int fd, const void *buffer, unsigned size, struct intr_frame 
       lock_release(&sys_lock);
       return -1;
     }
+    pinning_pages(buffer, size);
     //get the size of how many bytes were written - called a function in file.c
     int size_write = file_write(file_pointer, buffer, size); 
+    no_pinning_pages(buffer, size);
     //release lock here
     lock_release(&sys_lock);
     return size_write;
 }
 
 int syscall_read (int fd, void *buffer, unsigned size, struct intr_frame *f) {
-  //check_addy((const uint8_t *)buffer, f, false);
-  //check_addy((const uint8_t *)buffer + size -1, f, false);
+  check_addy((const uint8_t *)buffer, f, true);
+  check_addy((const uint8_t *)buffer + size -1, f, true);
   if (size <= 0) {
     // can't read less than one character so just return the size back 
     return size;
@@ -143,9 +178,11 @@ int syscall_read (int fd, void *buffer, unsigned size, struct intr_frame *f) {
     lock_release(&sys_lock);
     return -1;
   }
+  pinning_pages(buffer, size);
   //reads the file - a function in file.c 
   int size_read = file_read(file_pointer, buffer, size);
   //release the lock here 
+  no_pinning_pages(buffer, size);
   lock_release(&sys_lock);
   return size_read;
 
@@ -383,6 +420,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   //if its the first time initializing the syslock then do a lock_init and set sys_lock_init to true
     //Get value of signal
     void *stackPhysicalPointer = pagedir_get_page(thread_current()->pagedir, (const void *) f->esp);
+    thread_current()->esp = f->esp;
     //if the stack pointer is null or its above PHYS_Base then its not a good pointer 
     if(stackPhysicalPointer == NULL) {
       return syscall_exit(-1);
@@ -409,6 +447,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
 
     uint32_t signal = * (int *) stackPointer;
+    // printf("thread %d running syscall %d\n", thread_current()->tid, signal);
     int args_v[3];
     //if statements for each signal
     // each function gets however many arguments it needs from the get_args_stack function and then calls its respective syscall function
@@ -420,7 +459,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     } else if(signal == SYS_CREATE) {
         get_args_stack(2,f, &args_v[0]);
         // get the physical address for the pointer to the file
-        check_addy((const uint8_t *) args_v[0], f, true);
+        check_addy((const uint8_t *) args_v[0], f, false);
         void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
         if(ptr == NULL) {
           return syscall_exit(-1);
@@ -430,7 +469,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         f->eax = syscall_create((const char *)args_v[0], (unsigned)args_v[1]);
         
     } else if(signal == SYS_EXEC) {
-
+        // printf("SYS_EXEC with stack pointer at %p\n", f->esp);
         get_args_stack(1,f, &args_v[0]);
          // get the physical address for the pointer to the char *cmd_line
         void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
@@ -495,7 +534,6 @@ syscall_handler(struct intr_frame *f UNUSED)
       for(int i = 0; i < size; i++) {
         check_addy((const uint8_t *)buffer+i,f,true);
       }
-
       return_code = syscall_read(fd, buffer, size,f);
       f->eax = (uint32_t) return_code;
 
@@ -562,12 +600,15 @@ syscall_handler(struct intr_frame *f UNUSED)
       memory_copy(f->esp + 4, &fd, sizeof(fd));
       memory_copy(f->esp + 8, &buffer, sizeof(buffer));
       memory_copy(f->esp + 12, &size, sizeof(size));
+      struct thread *t = thread_current();
+      void *upage = (void *)buffer;
       for(int i = 0; i < size; i++) {
         check_addy((const uint8_t *)buffer+i,f,false);
       }
-
       return_code = syscall_write(fd, buffer, size, f);
       f->eax = (uint32_t) return_code;
+      //frame_pinning(kpage, false); 
+
 
 
       //   // Write signal

@@ -20,6 +20,8 @@
 #include "userprog/process.h"
 #include "userprog/tss.h"
 #include "syscall.h"
+#include "vm/frame.h"
+#include "vm/page.h"
 
 
 #define LOGGING_LEVEL 6
@@ -36,6 +38,7 @@ tid_t
 process_execute(const char *file_name)
 {
     char *fn_copy;
+    char* fn_copy_2;
     tid_t tid;
 
     // NOTE:
@@ -52,7 +55,12 @@ process_execute(const char *file_name)
     }
     strlcpy(fn_copy, file_name, PGSIZE);
     char *token_ptr;
-    file_name = strtok_r((char*)file_name, " ", &token_ptr);
+
+    fn_copy_2 = palloc_get_page(0);
+    if (fn_copy_2 == NULL) return TID_ERROR;
+    strlcpy(fn_copy_2, file_name, PGSIZE);
+
+    file_name = strtok_r(fn_copy_2, " ", &token_ptr);
 
     //check here if file_name exists in the directory, if not return -1
     struct dir *dir = dir_open_root();
@@ -140,12 +148,23 @@ process_exit(void)
 {
     struct thread *cur = thread_current();
     uint32_t *pd;
-
+    struct hash_iterator i;
+    //Freeing from swap space on exit
+    hash_first(&i, cur->SuppT);
+    while(hash_next(&i)) {
+        struct SPTE *suppt_e = hash_entry(hash_cur(&i), struct SPTE, SPTE_hash_elem);
+        if(suppt_e->page_stat == SWAP) {
+            //printf("freeing swap\n");
+            swap_free(suppt_e->swap_idx);
+        }
+    }
     lock_acquire(&sys_lock);
     file_close(cur->file);
     lock_release(&sys_lock);
     sema_up(&cur->thread_dying); //get status reaped
     sema_down(&cur->thread_dead); //wait to continue dying after status gets reaped
+    vm_destory(cur->SuppT);
+    cur->SuppT = NULL;
     /* Destroy the current process's page directory and switch back
      * to the kernel-only page directory. */
     pd = cur->pagedir;
@@ -372,8 +391,6 @@ done:
 
 /* load() helpers. */
 
-static bool install_page(void *upage, void *kpage, bool writable);
-
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
 static bool
@@ -483,7 +500,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         /* Advance. */
        struct thread *current = thread_current();
        ASSERT(pagedir_get_page(current->pagedir, upage) == NULL);
-       bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, read_bytes, zero_bytes, writable);
+       bool condition_install = SPTE_install_file(current->SuppT, file, ofs, upage, read_bytes, zero_bytes, writable, current->pagedir, thread_current());
        if(condition_install == false) {
             return false;
         }
@@ -512,16 +529,27 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     bool success = false;
 
     log(L_TRACE, "setup_stack()");
-
-    kpage = palloc_get_page(PAL_USER | PAL_ZERO); //Grabs user page from memory (zeroed out)
+    struct SPTE *spte = (struct SPTE *) malloc(sizeof(struct SPTE));
+    struct thread *t = thread_current();
+    spte->pinned = true;
+    spte->upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
+    spte->page_stat = FRAME;
+    spte->writeable = true;
+    spte->pagedir = t->pagedir;
+    spte->curr = thread_current();
+    struct hash_elem *elem_exist;
+    elem_exist = hash_insert(&(t->SuppT->page_entries), &spte->SPTE_hash_elem);
+    kpage = get_frame(spte, PAL_USER | PAL_ZERO);
     if (kpage != NULL) {
         success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true); //If successful, install page
+        //success = success && SPTE_install_frame_setup_stack(t->SuppT, spte.upage, kpage, true);
         if (success) {
             *esp = PHYS_BASE; //Sets to start of stack
+              //printf("this is the upage in process.c %p\n", spte.upage);
         } else {
             palloc_free_page(kpage); //Didn't work, free page
         }
-        // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: do not uncomment this for testing. Uncomment the hex_dump call at the end of this function instead
+        //hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: do not uncomment this for testing. Uncomment the hex_dump call at the end of this function instead
     }
 
     //3.5.1 Program Startup Details to set up stack (strtok is your friend)
@@ -610,13 +638,14 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
  * with palloc_get_page().
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
-static bool
+bool
 install_page(void *upage, void *kpage, bool writable)
 {
     struct thread *t = thread_current();
 
     /* Verify that there's not already a page at that virtual
      * address, then map our page there. */
-    return pagedir_get_page(t->pagedir, upage) == NULL
-           && pagedir_set_page(t->pagedir, upage, kpage, writable);
+    bool success =  (pagedir_get_page(t->pagedir, upage) == NULL);
+    success = success && pagedir_set_page(t->pagedir, upage, kpage, writable);
+    return success;
 }
