@@ -6,7 +6,6 @@ static struct block *swap_slot;
 
 static const size_t SWAP_SLOT_SIZE = PGSIZE / BLOCK_SECTOR_SIZE;
 
-static struct lock block_lock;
 
 static size_t swap_size;
 
@@ -15,13 +14,11 @@ void swap_init(void) {
     swap_slot = block_get_role(BLOCK_SWAP);
     swap_size = block_size(swap_slot) / SWAP_SLOT_SIZE;
     block_tracker = bitmap_create(swap_size);
-    lock_init(&block_lock);
 
     bitmap_set_all(block_tracker, true);
 }
 
 int putInSwapArea(void *k_page) {
-    //lock_acquire(&block_lock);
     bool has_lock = lock_held_by_current_thread(&sys_lock);
     if(has_lock) {
         lock_release(&sys_lock);
@@ -33,7 +30,6 @@ int putInSwapArea(void *k_page) {
         block_write(swap_slot, swap_avail * SWAP_SLOT_SIZE + i, k_page + (BLOCK_SECTOR_SIZE * i));
 
     }
-    //lock_release(&block_lock);
     lock_release(&sys_lock);
     if(has_lock) {
         lock_acquire(&sys_lock);
@@ -43,7 +39,6 @@ int putInSwapArea(void *k_page) {
 }
 
 void getFromSwapArea(int swap_idx, void *k_page) {
-    //lock_acquire(&block_lock);
     bool has_lock = lock_held_by_current_thread(&sys_lock);
     if(has_lock) {
         lock_release(&sys_lock);
@@ -61,19 +56,16 @@ void getFromSwapArea(int swap_idx, void *k_page) {
     if(has_lock) {
         lock_acquire(&sys_lock);
     }
-    //lock_release(&block_lock);
 
 }
 
 void swap_free(int swap_idx) {
-    //lock_acquire(&block_lock);
     bool has_lock = lock_held_by_current_thread(&sys_lock);
     if(has_lock) {
         lock_release(&sys_lock);
     }
     lock_acquire(&sys_lock);
     bitmap_set(block_tracker, swap_idx, true);
-    //lock_release(&block_lock);
     lock_release(&sys_lock);
     if(has_lock) {
         lock_acquire(&sys_lock);

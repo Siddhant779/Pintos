@@ -20,16 +20,6 @@ struct FTE {
     bool pinned; // this is something we need for the eviction alogorithm - if a pin is framed that means we shouldn't remove it 
 };
 
-struct FTE_hash {
-    uint32_t index;
-    void *kpage;
-    struct hash_elem frame_elem;
-};
-
-struct hash frame_entries; // used for mapping the kpage to the index does not need to contain that much stuff;
-
-struct list frame_list; // this is the main frame list 
-
 struct bitmap *frame_map; //to be initialized in init
 
 //struct FTE frame_table[FRAME_NUM];  //array of all frames
@@ -38,7 +28,6 @@ struct FTE *frame_table;
 
 int evict_start; //points to the index of the last evicted frame + 1, or 0 by default
 
-int hi_test;
 
 void frame_init(void); //initialize frame table and frame bitmap
 
