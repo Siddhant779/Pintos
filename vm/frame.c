@@ -44,19 +44,18 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     }
     else if(idx == BITMAP_ERROR) {
         idx = evict_frame(thread_current()->pagedir); // updating the old SPTE should be automatically handled during eviction
-        // printf("FRAME: evicting frame at idx %d with upage %p and kpage %p\n", idx, frame_table[idx].page_entry->upage, frame_table[idx].page_entry->kpage);
         bool is_dirty_page = false;
         frame_table[idx].pinned = false;
         is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->kpage);
         if(is_dirty_page) {
             int swap_idx = putInSwapArea(frame_table[idx].page_entry->kpage);
-            SPTE_set_swap(frame_table[idx].page_entry->curr->SuppT, frame_table[idx].page_entry->upage, swap_idx);
+            SPTE_set_swap(frame_table[idx].page_entry->curr->SuppT, frame_table[idx].page_entry->upage, swap_idx, frame_table[idx].page_entry->curr);
             pagedir_set_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage, true);
             pagedir_clear_page(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage);
             palloc_free_page(frame_table[idx].page_entry->kpage);
         }
         else{
-            SPTE_set_in_file(frame_table[idx].page_entry->curr->SuppT, frame_table[idx].page_entry->upage);
+            SPTE_set_in_file(frame_table[idx].page_entry->curr->SuppT, frame_table[idx].page_entry->upage, frame_table[idx].page_entry->curr);
             pagedir_clear_page(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage);
             palloc_free_page(frame_table[idx].page_entry->kpage);
 
@@ -64,22 +63,13 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
         k_page = palloc_get_page(PAL_USER | flags);
         new_page->kpage = k_page;
     }
-    struct FTE_hash *f = malloc(sizeof(struct FTE_hash)); // frame you wish to store the new page in
     frame_table[idx].thr = thread_current();
+    new_page->index_frame = idx;
     frame_table[idx].page_entry = new_page;
-    f->index = idx;
-    f->kpage = k_page;
-    hash_insert(&frame_entries, &(f->frame_elem));
     lock_release(&frame_lock);
     return k_page;
 }
-void SPTE_set_swap(struct SPT *supT, void *upage, int swap_idx) {
-    // struct thread *t = thread_current();
-    // bool has_sys_lock = lock_held_by_current_thread(&t->spt_lock);
-    // if(has_sys_lock){
-    //     lock_release(&t->spt_lock);
-    // }
-    // lock_acquire(&t->spt_lock);
+void SPTE_set_swap(struct SPT *supT, void *upage, int swap_idx, struct thread *t) {
     struct SPTE *supTe;
     supTe = lookup_page(supT, upage);
     if(supTe == NULL) {
@@ -89,18 +79,8 @@ void SPTE_set_swap(struct SPT *supT, void *upage, int swap_idx) {
     supTe->page_stat = SWAP;
     supTe->kpage == NULL;
     supTe->pinned = false;
-    // lock_release(&t->spt_lock);
-    // if(has_sys_lock){
-    //     lock_acquire(&t->spt_lock);
-    // }
 }
-void SPTE_set_in_file(struct SPT *supT, void *upage) {
-    struct thread *t = thread_current();
-    // bool has_sys_lock = lock_held_by_current_thread(&t->spt_lock);
-    // if(has_sys_lock){
-    //     lock_release(&t->spt_lock);
-    // }
-    // lock_acquire(&t->spt_lock);
+void SPTE_set_in_file(struct SPT *supT, void *upage, struct thread *t) {
     struct SPTE *supTe;
     supTe = lookup_page(supT, upage);
     if(supTe == NULL) {
@@ -109,10 +89,6 @@ void SPTE_set_in_file(struct SPT *supT, void *upage) {
     supTe->page_stat = IN_FILE;
     supTe->kpage == NULL;
     supTe->pinned = false;
-    // lock_release(&t->spt_lock);
-    // if(has_sys_lock){
-    //     lock_acquire(&t->spt_lock);
-    // }
 }
 void frame_init() {
     lock_init(&frame_lock);
@@ -201,7 +177,11 @@ int evict_frame(uint32_t *pagedir) {
 // }
 
 //Frame is the actual physical memory, pages are the info that you want to put in frames. When you are using a page, it has to be in frame, or it can be in swap area
-
+void vm_frame_free(int index_frame) {
+    
+    palloc_free_page(frame_table[index_frame].page_entry->kpage);
+    bitmap_reset(frame_map, index_frame);
+}
 static bool
 install_page(void *upage, void *kpage, bool writable)
 {

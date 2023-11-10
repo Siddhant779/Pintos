@@ -49,6 +49,8 @@ struct SPTE {
     uint32_t *pagedir;
     
     struct thread *curr;
+
+    int index_frame;
     // we need something for the swap here 
 };
 
@@ -58,4 +60,5 @@ bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage, uint32_t *pagedir, s
 bool SPTE_install_file(struct SPT *SuT, struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable, uint32_t *pagedir, struct thread *t);
 bool SPTE_install_frame_setup_stack(struct SPT *SuT, uint8_t *upage, uint8_t *kpage, bool writeable);
 bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage);
+void vm_destory(struct SPT *table);
 #endif
