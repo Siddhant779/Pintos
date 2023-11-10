@@ -520,7 +520,7 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     log(L_TRACE, "setup_stack()");
     struct SPTE *spte = (struct SPTE *) malloc(sizeof(struct SPTE));
     struct thread *t = thread_current();
-    spte->pinned = true;
+    spte->pinned = false;
     spte->upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
     spte->page_stat = FRAME;
     spte->writeable = true;
