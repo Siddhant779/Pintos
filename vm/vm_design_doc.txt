@@ -8,8 +8,10 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@utexas.edu>
-FirstName LastName <email@utexas.edu>
+Siyuan (Tim) Chen timchenut567@utexas.edu
+Saumya Jain saumyajain@utexas.edu
+David Li davidli216@utexas.edu
+Siddhant Pandit panditsiddhant.sp@utexas.edu
 
 ---- PRELIMINARIES ----
 
@@ -33,6 +35,18 @@ FirstName LastName <email@utexas.edu>
 
 >> A2: In a few paragraphs, describe your code for accessing the data
 >> stored in the SPT about a given page.
+To access the data stored in the SPT about a given page, the code typically 
+involves performing a hash table lookup based on the virtual address of the page. 
+This lookup yields a pointer to the corresponding SPT entry. Once the entry is obtained, 
+the code can access various fields in the entry to gather information about the page. 
+For example, the code might check if the page is currently in memory or swapped out, 
+and if it is on disk, the code would also contain information about the location of 
+the page in the swap partition or the corresponding file on disk. 
+Specifically in our code: 
+   The `SPT_init` function initializes a new SPT. It allocates memory for the SPT structure, 
+   initializes a lock for synchronization, and initializes a hash table (`page_entries`) to 
+   store page entries. Each entry in this hash table corresponds to a virtual page in the 
+   process's address space.
 
 ---- SYNCHRONIZATION ----
 
