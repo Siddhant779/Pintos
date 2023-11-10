@@ -44,6 +44,7 @@ void *get_frame(struct SPTE *new_page, enum palloc_flags flags) {
     }
     else if(idx == BITMAP_ERROR) {
         idx = evict_frame(thread_current()->pagedir); // updating the old SPTE should be automatically handled during eviction
+        // printf("FRAME: evicting frame at idx %d with upage %p and kpage %p\n", idx, frame_table[idx].page_entry->upage, frame_table[idx].page_entry->kpage);
         bool is_dirty_page = false;
         frame_table[idx].pinned = false;
         is_dirty_page = is_dirty_page || pagedir_is_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->upage) || pagedir_is_dirty(frame_table[idx].page_entry->pagedir, frame_table[idx].page_entry->kpage);

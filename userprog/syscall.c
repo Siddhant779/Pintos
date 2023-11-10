@@ -448,6 +448,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
 
     uint32_t signal = * (int *) stackPointer;
+    // printf("thread %d running syscall %d\n", thread_current()->tid, signal);
     int args_v[3];
     //if statements for each signal
     // each function gets however many arguments it needs from the get_args_stack function and then calls its respective syscall function
@@ -469,7 +470,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         f->eax = syscall_create((const char *)args_v[0], (unsigned)args_v[1]);
         
     } else if(signal == SYS_EXEC) {
-
+        // printf("SYS_EXEC with stack pointer at %p\n", f->esp);
         get_args_stack(1,f, &args_v[0]);
          // get the physical address for the pointer to the char *cmd_line
         void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
