@@ -90,7 +90,11 @@ Specifically in our code:
 >> A3: When two user processes both need a new frame at the same time,
 >> how are races avoided?
 
-The frame table is protected by a lock so that only one process can access and modify it at a time. 
+The frame table is protected by a lock so that only one process can access and modify it at a time. In particular,
+the get_frame() method first locks the frame lock so that there are no outside changes made to the frame table. Thus,
+in such a scenario, whichever process first acquires the lock will first get a frame from the frame table and then
+will surrender the lock to the other process which can then get another frame. This way, both processes do not try to
+get the same frame from the frame table and a race condition is avoided.
 
 ---- RATIONALE ----
 
