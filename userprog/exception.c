@@ -168,6 +168,7 @@ page_fault(struct intr_frame *f)
         // says that the stack size is 8 MB so thats why i did 0x800000
             if ((esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32 ) && (fault_addr < PHYS_BASE && PHYS_BASE - 0x800000 <= fault_addr)) {
                 //printf("in the stack growth part \n");
+                // printf("PAGE FAULT: Thread %d is growing the stack\n", curr->tid);
                 SPTE_install_zeropage (curr->SuppT, fault_page, curr->pagedir, thread_current());
             }
         }

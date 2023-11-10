@@ -129,6 +129,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   }
 
   void *frame_page = get_frame (spte, PAL_USER);
+  // printf("LAZY LOADING upage %p into kpage %p\n", spte->upage, spte->kpage);
   spte = lookup_page(SuT, upage);
   if(spte == NULL) {
     //printf("first one error\n");
