@@ -21,21 +21,34 @@ void swap_init(void) {
 }
 
 int putInSwapArea(void *k_page) {
-    lock_acquire(&block_lock);
+    //lock_acquire(&block_lock);
+    bool has_lock = lock_held_by_current_thread(&sys_lock);
+    if(has_lock) {
+        lock_release(&sys_lock);
+    }
+    lock_acquire(&sys_lock);
     size_t swap_avail = bitmap_scan_and_flip(block_tracker, 0, 1, true);
 
     for(int i = 0; i < SWAP_SLOT_SIZE; i++) {
         block_write(swap_slot, swap_avail * SWAP_SLOT_SIZE + i, k_page + (BLOCK_SECTOR_SIZE * i));
 
     }
-    lock_release(&block_lock);
-
+    //lock_release(&block_lock);
+    lock_release(&sys_lock);
+    if(has_lock) {
+        lock_acquire(&sys_lock);
+    }
 
     return swap_avail;
 }
 
 void getFromSwapArea(int swap_idx, void *k_page) {
-    lock_acquire(&block_lock);
+    //lock_acquire(&block_lock);
+    bool has_lock = lock_held_by_current_thread(&sys_lock);
+    if(has_lock) {
+        lock_release(&sys_lock);
+    }
+    lock_acquire(&sys_lock);
     ASSERT(swap_idx < swap_size);
 
     if(bitmap_test(block_tracker, swap_idx) == false) {
@@ -44,12 +57,25 @@ void getFromSwapArea(int swap_idx, void *k_page) {
         }
     }
     bitmap_mark(block_tracker,swap_idx);
-    lock_release(&block_lock);
+    lock_release(&sys_lock);
+    if(has_lock) {
+        lock_acquire(&sys_lock);
+    }
+    //lock_release(&block_lock);
 
 }
 
 void swap_free(int swap_idx) {
-    lock_acquire(&block_lock);
+    //lock_acquire(&block_lock);
+    bool has_lock = lock_held_by_current_thread(&sys_lock);
+    if(has_lock) {
+        lock_release(&sys_lock);
+    }
+    lock_acquire(&sys_lock);
     bitmap_set(block_tracker, swap_idx, true);
-    lock_release(&block_lock);
+    //lock_release(&block_lock);
+    lock_release(&sys_lock);
+    if(has_lock) {
+        lock_acquire(&sys_lock);
+    }
 }

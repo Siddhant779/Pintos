@@ -108,6 +108,25 @@ bool SPTE_install_zeropage(struct SPT *SuT, uint8_t *upage, uint32_t *pagedir, s
   return false;
 }
 
+static void destory_spte_spt(struct hash_elem *elem, void *un UNUSED) {
+  struct SPTE *suppt_e = hash_entry(elem, struct SPTE, SPTE_hash_elem);
+  if(suppt_e->page_stat == SWAP) {
+    //printf("freeing swap\n");
+    swap_free(suppt_e->swap_idx);
+  }
+  if(suppt_e->kpage != NULL) {
+    if(suppt_e->page_stat == FRAME) {
+      vm_frame_free(suppt_e->index_frame);
+    }
+   }
+  free(suppt_e);
+        
+}
+
+void 
+vm_destory(struct SPT *table) {
+  hash_destroy(&table->page_entries, destory_spte_spt);
+}
 
 // this is the main function for loading the page for the address upage 
 bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
@@ -115,10 +134,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
   lock_acquire(&t->spt_lock);
   struct SPTE *spte;
   spte = lookup_page(SuT, upage);
-  //USE THE FILESYS LOCK INSTEAD OF SPT HERE - THEN FOR EACH CHANGE FOR SPTE USE THE SPTE LOCK 
-  //- THIS IS WITHIN HERE AND THE SPTE FUCNTIONS IN FRAME.C 
   if(spte == NULL) {
-    //printf("first one error\n");
     lock_release(&t->spt_lock);
     return false;
   }
@@ -127,12 +143,9 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     lock_release(&t->spt_lock);
     return true;
   }
-
   void *frame_page = get_frame (spte, PAL_USER);
-  // printf("LAZY LOADING upage %p into kpage %p\n", spte->upage, spte->kpage);
   spte = lookup_page(SuT, upage);
   if(spte == NULL) {
-    //printf("first one error\n");
     lock_release(&t->spt_lock);
     return false;
   }
@@ -142,18 +155,13 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     return true;
   }
   if(frame_page == NULL) {
-    //printf("second one error\n");
     lock_release(&t->spt_lock);
     return false;
   }
    bool writeable2 = true;
-  // going to need to chagne this code as we get more conditions so that it reflects what we have 
   if(spte->page_stat == FRAME){
-    // do nothing i think 
   }
   else if(spte->page_stat == SWAP) {
-    //printf("getting from swap area\n");
-    //printf("get from swap area");
     getFromSwapArea(spte->swap_idx, frame_page);
     install_page(spte->upage,spte->kpage, spte->writeable);
     pagedir_set_dirty(pagedir, spte->upage, true);
@@ -194,8 +202,7 @@ bool load_page(struct SPT *SuT, uint32_t *pagedir, void *upage) {
     if(!status) {
       //free the frame need to maek code for that -- this just means free up the frame 
       palloc_free_page(spte->kpage);
-      //printf("this is freeing up the page\n");
-      //lock_release(&t->spt_lock);
+      lock_release(&t->spt_lock);
       return false;
     }
 

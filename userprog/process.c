@@ -148,12 +148,23 @@ process_exit(void)
 {
     struct thread *cur = thread_current();
     uint32_t *pd;
-
+    struct hash_iterator i;
+    //Freeing from swap space on exit
+    hash_first(&i, cur->SuppT);
+    while(hash_next(&i)) {
+        struct SPTE *suppt_e = hash_entry(hash_cur(&i), struct SPTE, SPTE_hash_elem);
+        if(suppt_e->page_stat == SWAP) {
+            //printf("freeing swap\n");
+            swap_free(suppt_e->swap_idx);
+        }
+    }
     lock_acquire(&sys_lock);
     file_close(cur->file);
     lock_release(&sys_lock);
     sema_up(&cur->thread_dying); //get status reaped
     sema_down(&cur->thread_dead); //wait to continue dying after status gets reaped
+    vm_destory(cur->SuppT);
+    cur->SuppT = NULL;
     /* Destroy the current process's page directory and switch back
      * to the kernel-only page directory. */
     pd = cur->pagedir;
@@ -520,7 +531,7 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
     log(L_TRACE, "setup_stack()");
     struct SPTE *spte = (struct SPTE *) malloc(sizeof(struct SPTE));
     struct thread *t = thread_current();
-    spte->pinned = false;
+    spte->pinned = true;
     spte->upage = ((uint8_t *)PHYS_BASE) - PGSIZE;
     spte->page_stat = FRAME;
     spte->writeable = true;
@@ -538,7 +549,7 @@ setup_stack(void **esp, const char *input, char **token_ptr) //Keep track of poi
         } else {
             palloc_free_page(kpage); //Didn't work, free page
         }
-        // hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: do not uncomment this for testing. Uncomment the hex_dump call at the end of this function instead
+        //hex_dump( *(int*)esp, *esp, 128, true ); // NOTE: do not uncomment this for testing. Uncomment the hex_dump call at the end of this function instead
     }
 
     //3.5.1 Program Startup Details to set up stack (strtok is your friend)

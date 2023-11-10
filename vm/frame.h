@@ -57,4 +57,6 @@ void frame_by_upage(struct SPT *supT, void *upage, bool pinning);
 
 void frame_pinning(void *kpage, bool pin);
 
+void vm_frame_free(int index_frame);
+
 #endif
