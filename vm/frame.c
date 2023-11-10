@@ -6,24 +6,6 @@
 static bool install_page(void *upage, void *kpage, bool writable);
 static struct lock frame_lock;
 
-static unsigned clock_ptr, clock_max;
-
-static unsigned FTE_hash_func(const struct hash_elem *e, void *aux);
-static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
-
-
-static unsigned FTE_hash_func(const struct hash_elem *e, void *aux) {
-  struct FTE_hash *entry = hash_entry(e, struct FTE_hash, frame_elem);
-  return hash_int( (int)entry->kpage );
-}
-
-static bool FTE_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
-  struct FTE_hash *a_entry = hash_entry(a, struct FTE_hash, frame_elem);
-  struct FTE_hash *b_entry = hash_entry(b, struct FTE_hash, frame_elem);
-
-  return a_entry->kpage < b_entry->kpage;
-}
-
 /* Frame logic (add locks here)
  * Input: pointer to SPTE that you wish to associate to a frame
  * if frame is available, allocate to process that requested (link SPTE)
@@ -101,12 +83,7 @@ void frame_init() {
         frame_table[i].index = i;
     }
     
-    hash_init(&frame_entries, FTE_hash_func, FTE_less_func, NULL);
-    list_init(&frame_list);
     evict_start = 0;
-    clock_ptr = 0;
-    clock_max = FRAME_NUM;
-    hi_test = 1;
 
 }
 int evict_frame(uint32_t *pagedir) {
