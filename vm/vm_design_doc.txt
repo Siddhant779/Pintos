@@ -70,7 +70,7 @@ struct SPTE {
     uint32_t page_zero_bytes; - and zero the final page_zero_bytes 
 
     void *kpage; - frame associated with this page  - could be null if there is no frame 
-    void *upage; - for hte virutal address of hte page this exists as the key 
+    void *upage; - for the virutal address of the page this exists as the key 
 
     bool writeable; - if the page is writeable or not - lazy loading 
 
@@ -221,10 +221,14 @@ can be put in. However, if the frame is not dirty, then it will simply be overwr
 >> process Q, how do you adjust the page table (and any other data
 >> structures) to reflect the frame Q no longer has?
 
-In our swap process, when we put a frame into the swap area, we update the frame's 
-information in SPTE including where in the swap area the frame is stored, setting
-the frame's status to swapped, setting kpage to null, and setting pinned to false. 
-We also make the page as absent from directory and frees the page.
+In our swap process, when we put a frame into the swap area, we update the frame's information 
+in SPTE including where in the swap area the frame is stored, settingthe frame's status to swapped,
+setting kpage to null, and setting pinned to false. We also make the page as absent from directory 
+and frees the page. Since they are both different processes, synchornization is important. We did 
+this by implementing locks in our code- for instance whenever we are evicting a page or bringing a 
+frame from swap we use locks such as frame lock or sys lock. This is needed so that other processes
+are updated to the most recent frame table.
+
 
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
@@ -290,7 +294,7 @@ and these pinned frames cannot be a part of the clock algorithm that is implemen
 cannot be assigned to another process like Q in this situation until they are unpinned which will happen after 
 the loading in P is complete. In order to do this we have two functions within syscall.c that first loookup the page
 based on the upage and set the specific spte that is returned by the upage to either true or false depending on if
-its pinning or unpinning hte frame.
+its pinning or unpinning the frame.
 
 >> B8: Explain how you handle access to paged-out pages that occur
 >> during system calls.  Do you use page faults to bring in pages (as
