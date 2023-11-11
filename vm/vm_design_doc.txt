@@ -31,9 +31,62 @@ Siddhant Pandit panditsiddhant.sp@utexas.edu
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-Frame Table **
-Swap Table **
-Supplemental Page Table **
+For our SPT we added lock, enum for the status of the page, struct for SPT, and
+struct for SPTE. All of these declarations are within our page.c and page.h which
+also include functions regarding loading pages and changing SPTE values.
+Most of lazy loading is implemented in these files. 
+
+
+struct lock spte_lock - uesd as lock for when a spte was being modified or accessed.
+each thread/SPT in this case has its own lock - this allows for faster runtime.
+
+-this is was the enum that was utilized to see where the spte exists- Frame means its in
+the frame table, swap means its in swap space, in file means its on disk and needs to be
+lazy loaded in, and all zero means its a page with memset of zero
+
+enum page_status {
+    FRAME, // in the memory 
+    SWAP, // on the swap table  
+    IN_FILE, //page is in the file needs to be brought in - on disk
+    ALL_ZERO // means its all zero 
+};
+
+-this was the Struct SPT that holds the hash of spte - each thread has its own spt which stores
+the spte data structures
+
+struct SPT {
+    struct hash page_entries;
+};
+
+-this is the struct SPTE that has information about the page 
+
+struct SPTE {
+    struct hash_elem SPTE_hash_elem; // Hash value for each page, lets it be part of the hash table
+    
+    //the key for the hash is the upage
+    struct file *file; - needed for lazy loading - file read 
+    off_t file_off; - needed for lazy loading - file offset within the file
+    uint32_t page_read_bytes; - read page_read_bytes from the file 
+    uint32_t page_zero_bytes; - and zero the final page_zero_bytes 
+
+    void *kpage; - frame associated with this page  - could be null if there is no frame 
+    void *upage; - for hte virutal address of hte page this exists as the key 
+
+    bool writeable; - if the page is writeable or not - lazy loading 
+
+    enum page_status page_stat; - has the status of the page as discussed above
+
+    int swap_idx; - swap index if the page exists in the swap- our code knows where to get the frame from within our swap 
+
+    bool pinned; - if the page is pinned you cnat remove it - needed for the eviction algorithm 
+
+    uint32_t *pagedir; - has the page directory specific to that page 
+    
+    struct thread *curr; - has the thread for that specific page
+
+    int index_frame; - has the index where the page exists within the frame table 
+    // we need something for the swap here 
+};
 
 
 ---- ALGORITHMS ----
@@ -41,10 +94,10 @@ Supplemental Page Table **
 >> A2: In a few paragraphs, describe your code for accessing the data
 >> stored in the SPT about a given page.
 
-To access the data stored in the SPT about a given page, the code involves performing a 
-hash table lookup based on the virtual address of the page. This lookup gives a pointer 
-to the corresponding SPTE. Once the entry is obtained, the code can access various fields 
-in the entry to gather information about the page. 
+To access the data stored in the SPT about a given page, the code typically 
+involves performing a hash table lookup based on the virtual address of the page. 
+This lookup yields a pointer to the corresponding SPT entry. Once the entry is obtained, 
+the code can access various fields in the entry to gather information about the page. 
 For example, the code might check if the page is currently in memory or swapped out, 
 and if it is on disk, the code would also contain information about the location of 
 the page.
@@ -83,7 +136,14 @@ Specifically in our code:
    the file corresponds to the given page. When this page needs to be loaded into memory, the file data can be 
    read from the specified offset. 
 
-   **Include something about page load??**
+   Later whenever a page is accessed, the page faults and it goes through our load_page function where all the
+   components of the SPTE are used. Within load_page, each page has a different function based on the status of
+   the page. For instance for a swap status - the page is brought in from the swap table and for in file status
+   the page is brought in from the disk by lazy loading. 
+
+   There are also functions within frame.c which handle changing the statuses of certain sptes during the eviction
+   algorithm. The eviction algorithm is able to accesses elements within the page becuase the FTE has a pointer to 
+   that specific spte.  
 
 ---- SYNCHRONIZATION ----
 
@@ -108,7 +168,7 @@ The FTE keeps track of the SPTE that is currently mapped to it which in turns al
 The supplemental page table itself is a hashtable that uses the virtual page address (upage) as a key that maps to
 a SPTE through a hash function. We chose to use a hash table as it allows easy and quick access of individual
 SPTEs from just the upage itself, which is very convenient whenever processing virtual memory and loading pages.
-For the frames, we used both a bitmap and also an array. First is a bitmap of length 267 (one for each frame) 
+For the frames, we used both a bitmap and also an array. First is a bitmap of length 367 (one for each frame) 
 that is either a '0' if the frame is unused, or a '1' if the frame is occupied. The bitmap allows us to easily 
 find an open frame to map a page to, which is used in our get_frames function. We also sed a basic array of FTEs 
 for the frame table itself. We chose to use an array because arrays are easy to traverse, which is useful during 
@@ -123,6 +183,26 @@ use alongside bitmaps.
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+For our paging to and from disk we added a struct FTE, a bitmap, and an array of 
+Frame tables that holds 367 FTE - all of this exists withing frame.c and frame.h  
+
+#define FRAME_NUM 367 - holds the number of frames that can exist in the frame table 
+
+- struct that describes the frame table entries that exist in the frame table array
+struct FTE {
+    uint32_t index; - holds the index of its spot within the frame table 
+    struct SPTE *page_entry; - pointer to page table entry (SPTE) associated to the frame
+    struct thread *thr; - pointer to the thread that the frame exists in - used in pagedir and palloc functions.
+    bool pinned; - this is something we need for the eviction alogorithm - if a pin is framed that means we shouldn't evict it 
+};
+
+struct bitmap *frame_map; - data structure that lets us know which entries within the frame table are free 
+
+struct FTE *frame_table; - pointer to array that holds the FTEs that exist - size is 367
+
+int evict_start; - points to the index of the last evicted frame + 1, or 0 by default - needed for the clock eviction algorithm
+
 
 ---- ALGORITHMS ----
 
@@ -139,6 +219,16 @@ use alongside bitmaps.
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
 
+In order to decide whether a page fault for an invalid virtual address should cause the stack to be extended into that page
+that faulted we had two conditions that needed to be met. The first condition was related to seeing if the fault address was 
+above our esp since we can extend the page above the stack. If that condition wasn't met then the fault address would have to
+either be 4 or 32 bytes below the esp due to the PUSH/ PUSHA instructions. If any of the conditions within the first condition
+are true then that means that the virtual address is on the stack frame. 
+The second condition is related to the fault address being less than PHYS_BASE or the fault address being greater than PHYS_BASE
+minus the max stack size.
+If both of these conditions are true then the stack is extented into the page that faulted 
+Another heuristic within our stack growth implementation is we saved the user program's esp into TCB during syscall handler so that
+if the page fault was from a syscall it would use the correct esp.
 
 ---- SYNCHRONIZATION ----
 
@@ -146,6 +236,7 @@ use alongside bitmaps.
 >> particular, explain how it prevents deadlock.  (Refer to the
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
+
 Our VM synchronization design incorporates locks at various layers to make sure our data structures 
 are safe and prevent deadlock scenarios.
 - At the frame table layer, a single lock is used, carefully avoiding circular dependencies by ensuring
@@ -170,6 +261,7 @@ releasing any locks a thread has before attempting to acquire new ones, and esta
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
 >> between P evicting Q's frame and Q faulting the page back in?
+
 There is a lock on the SPTE, which needs to be acquired in order to access a prtciular page or evict it. 
 While evicting, we get the lock that is on the SPTE corresponding to whichever page is being evicted. Then the 
 page is cleared and process Q tries to access the evicted page but it is unsuccessful and triggers a page fault. 
@@ -181,10 +273,13 @@ acquire the lock. This avoids race conditions when P evicts the frame and Q faul
 >> the file system or swap.  How do you ensure that a second process Q
 >> cannot interfere by e.g. attempting to evict the frame while it is
 >> still being read in?
+
 To ensure a second process cannot interfere, we implemented pinning. If a process loads a frame, it is pinned
 and these pinned frames cannot be a part of the clock algorithm that is implemented. This means that those frames
 cannot be assigned to another process like Q in this situation until they are unpinned which will happen after 
-the loading in P is complete. 
+the loading in P is complete. In order to do this we have two functions within syscall.c that first loookup the page
+based on the upage and set the specific spte that is returned by the upage to either true or false depending on if
+its pinning or unpinning hte frame.
 
 >> B8: Explain how you handle access to paged-out pages that occur
 >> during system calls.  Do you use page faults to bring in pages (as
