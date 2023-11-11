@@ -212,9 +212,10 @@ int evict_start; - points to the index of the last evicted frame + 1, or 0 by de
 The algorithm will first try to allocate to an empty space in physical 
 memory. When physical memory is full, evict_frame will be called. 
 This will go through physical memory until it finds a frame that has not been accessed. 
-Then it will choose the frame index and call swap on that frame. To do so, swap frame is called, 
-which evicts the frame from physical memory to swap area so the new frame can be put in. However,
-if the frame is not dirty, then it will simply be overwritten.
+As it goes through the frames, it sets any frame it checks to unaccessed, so if none are found,
+it will evict a frame on the next loop. Then it will choose the frame index and call swap on that frame. 
+To do so, swap frame is called, which evicts the frame from physical memory to swap area so the new frame 
+can be put in. However, if the frame is not dirty, then it will simply be overwritten.
 
 >> B3: When a process P obtains a frame that was previously used by a
 >> process Q, how do you adjust the page table (and any other data
