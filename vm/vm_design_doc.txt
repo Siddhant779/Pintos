@@ -209,11 +209,21 @@ int evict_start; - points to the index of the last evicted frame + 1, or 0 by de
 >> B2: When a frame is required but none is free, some frame must be
 >> evicted.  Describe your code for choosing a frame to evict.
 
--> clock algorithm? 
+The algorithm will first try to allocate to an empty space in physical 
+memory. When physical memory is full, evict_frame will be called. 
+This will go through physical memory until it finds a nondirty frame,
+which is a frame that has not recently been accessed. Then it will choose the frame 
+index and call swap on that frame. To do so, swap frame is called, which evicts the
+frame from physical memory to swap area so the new frame can be put in
 
 >> B3: When a process P obtains a frame that was previously used by a
 >> process Q, how do you adjust the page table (and any other data
 >> structures) to reflect the frame Q no longer has?
+
+In our swap process, when we put a frame into the swap area, we update the frame's 
+information in SPTE including where in the swap area the frame is stored, setting
+the frame's status to swapped, setting kpage to null, and setting pinned to false. 
+We also make the page as absent from directory and frees the page.
 
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
