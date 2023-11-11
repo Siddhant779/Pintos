@@ -22,8 +22,6 @@ struct FTE {
 
 struct bitmap *frame_map; //to be initialized in init
 
-//struct FTE frame_table[FRAME_NUM];  //array of all frames
-
 struct FTE *frame_table;
 
 int evict_start; //points to the index of the last evicted frame + 1, or 0 by default

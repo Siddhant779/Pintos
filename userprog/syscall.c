@@ -58,11 +58,6 @@ void no_pinning_pages(const void *buffer, size_t size) {
     temp->pinned = false;
   }
 }
-// static void 
-// check_get_user(const uint8_t *uaddr) {
-//   valid_ptr((void *) uaddr);
-//   get_user(uaddr);
-// }
 // this code get_user was provided by the pintos documentation
 /* Reads a byte at user virtual address UADDR.
    UADDR must be below PHYS_BASE.

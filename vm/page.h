@@ -37,7 +37,6 @@ struct SPTE {
     void *kpage; // frame associated with this page  - could be null if there is no frame 
     void *upage; // for hte virutal address of hte page this exists as the key 
 
-    //bool isDirty; //Indicates of page has been modified or not -- in pagedir there is a function called isDirty that checks if the SPTE is dirty
     bool writeable;
 
     enum page_status page_stat;
