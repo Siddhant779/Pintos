@@ -36,6 +36,7 @@ tid_t
 process_execute(const char *file_name)
 {
     char *fn_copy;
+    char* fn_copy_2;
     tid_t tid;
 
     // NOTE:
@@ -52,7 +53,13 @@ process_execute(const char *file_name)
     }
     strlcpy(fn_copy, file_name, PGSIZE);
     char *token_ptr;
-    file_name = strtok_r((char*)file_name, " ", &token_ptr);
+
+    //Implement fix for strtok messing up text
+    fn_copy_2 = palloc_get_page(0);
+    if (fn_copy_2 == NULL) return TID_ERROR;
+    strlcpy(fn_copy_2, file_name, PGSIZE);
+
+    file_name = strtok_r(fn_copy_2, " ", &token_ptr);
 
     //check here if file_name exists in the directory, if not return -1
     struct dir *dir = dir_open_root();
