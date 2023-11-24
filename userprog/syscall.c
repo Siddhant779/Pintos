@@ -33,6 +33,34 @@ int syscall_wait (pid_t pid);
 void valid_ptr(void *v_ptr);
 bool syscall_create(const char* file_name, unsigned starting_size);
 
+//Filesys headers
+bool syscall_chdir(const char *dir);
+bool syscall_mkdir(const char *dir);
+bool syscall_readdir(int fd, char *name);
+bool syscall_isdir(int fd);
+int syscall_inumber(int fd);
+
+//Filesys functions
+bool syscall_chdir(const char *dir){
+
+}
+
+bool syscall_mkdir(const char *dir){
+
+}
+
+bool syscall_readdir(int fd, char *name){
+
+}
+
+bool syscall_isdir(int fd){
+
+}
+
+int syscall_inumber(int fd){
+  
+}
+
 int syscall_wait (pid_t pid) {
   //need to update this for the syscall wait - going to be calling process_wait
   return process_wait(pid);
@@ -475,4 +503,26 @@ syscall_handler(struct intr_frame *f UNUSED)
         //returns the number of bytes written into eax 
         f->eax = syscall_write(args_v[0], (const void *) args_v[1], (unsigned) args_v[2]);
     }
+
+    //Filesys Syscalls
+    else if(signal == SYS_CHDIR){
+
+    }
+    
+    else if(signal == SYS_MKDIR){
+
+    }
+
+    else if(signal == SYS_READDIR){
+
+    }
+
+    else if(signal == SYS_ISDIR){
+
+    }
+
+    else if(signal == SYS_INUMBER){
+
+    }
+
 }
