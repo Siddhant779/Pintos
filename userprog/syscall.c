@@ -58,9 +58,10 @@ bool syscall_isdir(int fd){
 }
 
 int syscall_inumber(int fd){
-  
+
 }
 
+//Userprog functions
 int syscall_wait (pid_t pid) {
   //need to update this for the syscall wait - going to be calling process_wait
   return process_wait(pid);
