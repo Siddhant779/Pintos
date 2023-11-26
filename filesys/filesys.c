@@ -50,7 +50,7 @@ filesys_create(const char *name, off_t initial_size)
 {
     block_sector_t inode_sector = 0;
     struct dir *dir = dir_open_root();
-    //Modify this to create file or directory depending on command
+    //Creates file, not directory, so this is false
     bool dir = false;
 
     bool success = (dir != NULL
