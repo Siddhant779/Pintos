@@ -50,9 +50,12 @@ filesys_create(const char *name, off_t initial_size)
 {
     block_sector_t inode_sector = 0;
     struct dir *dir = dir_open_root();
+    //Modify this to create file or directory depending on command
+    bool dir = false;
+
     bool success = (dir != NULL
                     && free_map_allocate(1, &inode_sector)
-                    && inode_create(inode_sector, initial_size)
+                    && inode_create(inode_sector, initial_size, dir) //Modified to accept dir param
                     && dir_add(dir, name, inode_sector));
 
     if (!success && inode_sector != 0) {

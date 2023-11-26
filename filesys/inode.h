@@ -16,6 +16,7 @@ struct inode_disk {
     off_t          length;      /* File size in bytes. */
     unsigned       magic;       /* Magic number. */
     uint32_t       unused[125]; /* Not used. */
+    bool directory; /* Inode is directory or file */
 };
 
 /* In-memory inode. */
@@ -26,10 +27,11 @@ struct inode {
     bool              removed;        /* True if deleted, false otherwise. */
     int               deny_write_cnt; /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;           /* Inode content. */
+    /* Access bool directory thru inode.data field, that pointd to an inode_disk with that info */
 };
 
 void inode_init(void);
-bool inode_create(block_sector_t, off_t);
+bool inode_create(block_sector_t, off_t, bool dir); //Modify to accept param on whether file is dir
 struct inode *inode_open(block_sector_t);
 struct inode *inode_reopen(struct inode *);
 block_sector_t inode_get_inumber(const struct inode *);
