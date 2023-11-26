@@ -56,24 +56,39 @@ bool syscall_readdir(int fd, char *name){
 //Determine if file descriptor is a directory
 bool syscall_isdir(int fd){
   //Get file from fd
-  struct file testFile = get_file_pointer(fd);
+  struct file* testFile = get_file_pointer(fd);
 
   //Is null, return false
   if(testFile == NULL){return false;}
 
   //Get file inode
-  struct inode fileInode = file_get_inode(&testFile);
+  struct inode* fileInode = file_get_inode(testFile);
 
   //Is null, return false
   if(fileInode == NULL){return false;}
 
   //Test if directory
-  
+  return fileInode->data.directory;
 
 }
 
 int syscall_inumber(int fd){
+  //Inodes should be defined by unique start param?
 
+  //Get file from fd
+  struct file* testFile = get_file_pointer(fd);
+
+  //Is null, return false
+  if(testFile == NULL){return false;}
+
+  //Get file inode
+  struct inode* fileInode = file_get_inode(testFile);
+
+  //Is null, return false
+  if(fileInode == NULL){return false;}
+
+  //Test if directory
+  return fileInode->data.start;
 }
 
 //Userprog functions
