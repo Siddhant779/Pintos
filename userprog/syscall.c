@@ -40,13 +40,20 @@ bool syscall_readdir(int fd, char *name);
 bool syscall_isdir(int fd);
 int syscall_inumber(int fd);
 
+//Make function to parse directory
+//dir_open_root, use dir_opens with strtok
+
 //Filesys functions
 bool syscall_chdir(const char *dir){
 
 }
 
 bool syscall_mkdir(const char *dir){
+  //Determine size of entry
+  size_t sizeEntry = 16; //Check if correct
 
+  //Creates dir in the given sector
+  filesys_create(dir, sizeEntry, true);
 }
 
 bool syscall_readdir(int fd, char *name){
@@ -204,7 +211,7 @@ syscall_create(const char* file_name, unsigned starting_size)
   //calls filesys create function in filesys.c for creating a new file
   //lock for when accessing files 
   lock_acquire(&sys_lock);
-  bool create = filesys_create(file_name, starting_size);
+  bool create = filesys_create(file_name, starting_size, false);
   lock_release(&sys_lock);
   return create;
 }

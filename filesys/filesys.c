@@ -46,12 +46,12 @@ filesys_done(void)
  * Fails if a file named NAME already exists,
  * or if internal memory allocation fails. */
 bool
-filesys_create(const char *name, off_t initial_size)
+filesys_create(const char *name, off_t initial_size, bool dir)
 {
     block_sector_t inode_sector = 0;
     struct dir *dir = dir_open_root();
-    //Creates file, not directory, so this is false
-    bool dir = false;
+
+    //Called with the fill path name (don't put parsing in your syscall) When you read end directory, call inode create
 
     bool success = (dir != NULL
                     && free_map_allocate(1, &inode_sector)
