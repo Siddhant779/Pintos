@@ -30,6 +30,12 @@ struct contents {
     //Define what each entry is, have an array of them not exceeding 512 bytes
 };
 
+//Definition of a sector
+struct entry {
+    char* name; //Name of file, you can look for it within the directory
+    block_sector_t sect; //Find where the file it
+};
+
 /* In-memory inode. */
 struct inode {
     struct list_elem  elem;           /* Element in inode list. */
