@@ -48,7 +48,7 @@ bool syscall_chdir(const char *dir){
 
 }
 
-bool syscall_mkdir(const char *dir){
+bool syscall_mkdir(const char *dir /* Absolute or relative path to create*/){
   //Determine size of entry
   size_t sizeEntry = 16; //Check if correct
 

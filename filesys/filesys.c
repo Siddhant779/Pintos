@@ -52,11 +52,12 @@ filesys_create(const char *name, off_t initial_size, bool dir)
     struct dir *dir = dir_open_root();
 
     //Called with the fill path name (don't put parsing in your syscall) When you read end directory, call inode create
+    //Call dir_open until you get to the end, at the end, create an inode (create a separate parse function)
 
     bool success = (dir != NULL
                     && free_map_allocate(1, &inode_sector)
-                    && inode_create(inode_sector, initial_size, dir) //Modified to accept dir param
-                    && dir_add(dir, name, inode_sector));
+                    && inode_create(inode_sector, initial_size, dir) //Modified to accept dir param 
+                    && dir_add(dir, name, inode_sector)); //Modify this to work with directories
 
     if (!success && inode_sector != 0) {
         free_map_release(inode_sector, 1);
