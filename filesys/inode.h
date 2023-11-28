@@ -28,6 +28,7 @@ struct inode_disk {
 //Store contents of directory in here (when you block read, you access the sector and reads 512 bytes, cast to struct to read the contents)
 struct contents {
     //Define what each entry is, have an array of them not exceeding 512 bytes
+    struct entry* entries;
 };
 
 //Definition of a sector

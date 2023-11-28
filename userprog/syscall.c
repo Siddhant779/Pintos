@@ -42,6 +42,18 @@ int syscall_inumber(int fd);
 
 //Make function to parse directory
 //dir_open_root, use dir_opens with strtok
+struct dir* parse_dir(const char* dir){
+    struct dir startDirectory;
+    if(dir[0] == '\\'){
+      //Absolute directory
+      startDirectory = dir_open_root();
+    } else {
+      //Current directory (have to store this info)
+      startDirectory = thread_current()->currDirectory;
+    }
+
+    
+}
 
 //Filesys functions
 bool syscall_chdir(const char *dir){
