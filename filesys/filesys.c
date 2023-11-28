@@ -113,3 +113,6 @@ do_format(void)
     free_map_close();
     printf("done.\n");
 }
+
+//Originally: inode is just a sector on a disk we know stores data in a specific way (inode is max 512 bytes)
+//Directories needs to contain files (needs to contain files and directories). Needs to have info (4 byte sector number) on where to find the inodes within directory

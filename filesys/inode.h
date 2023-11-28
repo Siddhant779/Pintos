@@ -13,10 +13,21 @@ struct bitmap;
  * Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk {
     block_sector_t start;       /* First data sector. */
+    //start doesn't tell u where this inode is, just tells you where the data for the file is
+    //Ex: inode in sector 37 and data in 52, data points to 52
+    //How it works before filesys, it only looks through the root dir, make it look thru each part of directory path
     off_t          length;      /* File size in bytes. */
     unsigned       magic;       /* Magic number. */
     uint32_t       unused[125]; /* Not used. */
     bool directory; /* Inode is directory or file */
+
+    //Store contents of directory in another sector 
+    //Each file/directory will contain alot of pointers, make one of the pointers point to the contents of the directory if it is a directory
+};
+
+//Store contents of directory in here (when you block read, you access the sector and reads 512 bytes, cast to struct to read the contents)
+struct contents {
+    inode_disk contents;
 };
 
 /* In-memory inode. */
