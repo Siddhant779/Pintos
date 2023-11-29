@@ -61,15 +61,19 @@ process_execute(const char *file_name)
 
     file_name = strtok_r(fn_copy_2, " ", &token_ptr);
 
+    //TODO: change the whole thing to use inodes, so we can open and reopen the inodes 
+    //TODO: Call reopen and close on an inode when needed.
     //check here if file_name exists in the directory, if not return -1
-    struct dir *dir = dir_open_root();
+    struct dir *dir = dir_open_root(); //Change to work with directories (Only do that if process doesn't have parent, TODO: add check for that)
     struct inode *inode = NULL;
     if (dir != NULL && !dir_lookup(dir, file_name, &inode)) {
         return -1;
     }
 
-    //Get current directory
-    struct dir* current = thread_current()->currDirectory;
+    //Get current directory TODO: change this to go into directories when needed
+    struct dir* currentDir = thread_current()->currDirectory;
+
+    //Needs inode repoen at some point, close inode when you open it 
 
     /* Create a new thread to execute FILE_NAME. */
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy, current);

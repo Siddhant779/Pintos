@@ -71,6 +71,7 @@ dir_get_inode(struct dir *dir)
  * if EP is non-null, and sets *OFSP to the byte offset of the
  * directory entry if OFSP is non-null.
  * otherwise, returns false and ignores EP and OFSP. */
+//Might need to be changed for looking for entries not in root?
 static bool
 lookup(const struct dir *dir, const char *name,
        struct dir_entry *ep, off_t *ofsp)
@@ -100,6 +101,7 @@ lookup(const struct dir *dir, const char *name,
  * and returns true if one exists, false otherwise.
  * On success, sets *INODE to an inode for the file, otherwise to
  * a null pointer.  The caller must close *INODE. */
+//Might need to be changed for looking for entries not in root?
 bool
 dir_lookup(const struct dir *dir, const char *name,
            struct inode **inode)
