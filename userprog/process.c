@@ -76,7 +76,7 @@ process_execute(const char *file_name)
     //Needs inode repoen at some point, close inode when you open it 
 
     /* Create a new thread to execute FILE_NAME. */
-    tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy, current);
+    tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy, currentDir);
     sema_down(&thread_current()->thread_false_start);// some type of 
     if (tid == TID_ERROR) {
         palloc_free_page(fn_copy);

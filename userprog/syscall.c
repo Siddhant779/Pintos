@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <string.h>
 
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -44,7 +45,7 @@ int syscall_inumber(int fd);
 struct dir* parse_dir(const char* dir){
   
     //String to parse (makes sure strtok doesn't mess it up)
-    char* directory = strcpy(directory, dir);
+    char* directory = strlcpy(directory, dir, strlen(dir));
 
     //Store current directory
     struct dir* currentDirectory;
@@ -59,7 +60,7 @@ struct dir* parse_dir(const char* dir){
 
     //Parse until end
     while(strlen(directory) > 0){
-      char* nextElmName = strtok(directory, "\\", &directory); //Parse the next element in directory
+      char* nextElmName = strtok_r(directory, "\\", &directory); //Parse the next element in directory
       struct inode* nextDirEntry = NULL;
       if(!dir_lookup(currentDirectory, nextElmName, &nextDirEntry)){return NULL;} //Lookup next element. If lookup failed, return NULL
       currentDirectory = dir_open(nextDirEntry); //Optained inode for next element, open dir from it
@@ -71,7 +72,11 @@ struct dir* parse_dir(const char* dir){
 
 //Filesys functions
 bool syscall_chdir(const char *dir){ //This is responsible for moving down directories
+  //Navigate to new dir
   struct dir* newDir = parse_dir(dir);
+  if(newDir == NULL){return false;}
+
+  //Get and change thread's current dir
   struct thread* currentThread = thread_current();
   currentThread->currDirectory = newDir;
 }
