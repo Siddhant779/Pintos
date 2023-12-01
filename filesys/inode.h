@@ -18,7 +18,7 @@ struct inode_disk {
     //How it works before filesys, it only looks through the root dir, make it look thru each part of directory path
     off_t          length;      /* File size in bytes. */
     unsigned       magic;       /* Magic number. */
-    uint32_t       unused[125]; /* Not used. */
+    uint32_t       unused[124]; /* Not used. Reduce size if other params are needed*/
     bool directory; /* Inode is directory or file */
 
     //Store contents of directory in another sector 
