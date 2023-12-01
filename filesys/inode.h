@@ -18,8 +18,9 @@ struct inode_disk {
     //How it works before filesys, it only looks through the root dir, make it look thru each part of directory path
     off_t          length;      /* File size in bytes. */
     unsigned       magic;       /* Magic number. */
-    uint32_t       unused[124]; /* Not used. Reduce size if other params are needed*/
+    uint32_t       unused[123]; /* Not used. Reduce size if other params are needed, needs to be block_sector sized*/
     bool directory; /* Inode is directory or file */
+    struct contents* dirContents; //TODO: Figure out how to implement this in the unused part instead of a separate pointer 
 
     //Store contents of directory in another sector 
     //Each file/directory will contain alot of pointers, make one of the pointers point to the contents of the directory if it is a directory
@@ -28,7 +29,7 @@ struct inode_disk {
 //Store contents of directory in here (when you block read, you access the sector and reads 512 bytes, cast to struct to read the contents)
 struct contents {
     //Define what each entry is, have an array of them not exceeding 512 bytes (use dir entry from directory.h)
-    struct dir_entry* entries;
+    struct dir* entry;
 };
 
 /* In-memory inode. */
