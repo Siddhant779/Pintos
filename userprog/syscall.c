@@ -13,6 +13,8 @@
 #include "process.h"
 #include "exception.h"
 
+#define READDIR_MAX_LEN 16
+
 
 bool sys_lock_init = false;
 
@@ -64,9 +66,29 @@ bool syscall_mkdir(const char *dir /* Absolute or relative path to create*/){
 }
 
 bool syscall_readdir(int fd, char *name){
-  bool success = false;
-  //put logic here
-  return success;
+    //Assume dir is a type of file, get directory
+  struct file* dir = file_open(fd);
+  if(dir == NULL){return false;}
+
+  //Save original position
+  off_t originalPos = dir->pos;
+
+  //Read current entry as denoted by pos, test the read for if data is correct
+  if(!dir_readdir(dir, name)){return false;}
+  //printf("file name: %s\n" + name);
+
+  //Skip over "." and ".."
+  if(strcmp(name, ".") == 0 || strcmp(name, "..") == 0){
+    if(!dir_readdir(dir, name)){return false;} //End of dir
+    //printf("file name: %s\n" + name);
+  }
+
+  //Bring back original position
+  dir->pos = originalPos;
+
+  //Close file
+  file_close(dir);
+  return true;
 }
 
 //Determine if file descriptor is a directory

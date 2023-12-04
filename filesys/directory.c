@@ -335,6 +335,7 @@ done:
 /* Reads the next directory entry in DIR and stores the name in
  * NAME.  Returns true if successful, false if the directory
  * contains no more entries. */
+//MIGHT HAVE TO MAKE CHANGES
 bool
 dir_readdir(struct file *dir, char name[NAME_MAX + 1])
 {
