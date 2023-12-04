@@ -365,11 +365,16 @@ pid_t syscall_exec(const char* cmdline) {
 }
 //makes sure that the virtual address is a valid user address
 void valid_ptr(void *pointer) {
-    if (pointer < USER_VADDR_BOTTOM || !is_user_vaddr(pointer))
+    if (!is_user_vaddr(pointer))
     {
       // virtual memory address is not reserved for us (out of bound)
       syscall_exit(-1);
     }
+    // if (pointer < USER_VADDR_BOTTOM || !is_user_vaddr(pointer))
+    // {
+    //   // virtual memory address is not reserved for us (out of bound)
+    //   syscall_exit(-1);
+    // }
 }
 void syscall_exit(int status) {
     struct thread *t_curr = thread_current();
@@ -430,6 +435,25 @@ void
 syscall_init(void)
 {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
+    if(sys_lock_init == false) {
+        lock_init(&sys_lock);
+        sys_lock_init = true;
+    }
+}
+
+static int
+memory_copy (void *src, void *dst, size_t bytes)
+{
+  int32_t value;
+  size_t i;
+  for(i=0; i<bytes; i++) {
+    valid_ptr((void *) (src+i));
+    value = get_user(src + i);
+    if(value == -1) // segfault or invalid memory access
+    syscall_exit(-1);
+    *(char*)(dst + i) = value & 0xff;
+  }
+  return (int)bytes;
 }
 
 static void
@@ -513,15 +537,32 @@ syscall_handler(struct intr_frame *f UNUSED)
         syscall_halt();
         
     } else if(signal == SYS_OPEN) {
-        get_args_stack(1, f, &args_v[0]);
-        //gets the physical address for the pointer to the file 
-        void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
-        if(ptr == NULL) {
-          return syscall_exit(-1);
+      const char* filename;
+      int return_code;
+
+      memory_copy(f->esp + 4, &filename, sizeof(filename));
+      void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) filename);
+      if(ptr == NULL) {
+         return syscall_exit(-1);
         }
-        args_v[0] = (int)ptr;  // gets the actual address 
-        //stores the fd in eax that was returned by syscall_open
-        f->eax = syscall_open((const char *)args_v[0]);  // remove this file
+      if(filename == NULL) {
+        return syscall_exit(-1);
+        }
+      //filename = (int)ptr;  // gets the actual address 
+      //check_addy((const uint8_t *) filename, f, false);
+      return_code = syscall_open(filename);
+      f->eax = return_code;
+
+
+        // get_args_stack(1, f, &args_v[0]);
+        // //gets the physical address for the pointer to the file 
+        // void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+        // if(ptr == NULL) {
+        //   return syscall_exit(-1);
+        // }
+        // args_v[0] = (int)ptr;  // gets the actual address 
+        // //stores the fd in eax that was returned by syscall_open
+        // f->eax = syscall_open((const char *)args_v[0]);  // remove this file
         
     } else if(signal == SYS_READ) {
         get_args_stack(3, f, &args_v[0]);
