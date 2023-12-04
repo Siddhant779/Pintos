@@ -114,6 +114,24 @@ lookup(const struct file *dir, const char *name,
     return false;
 }
 
+/* Return true if the given directory is empty and false otherwise */
+static bool
+dir_is_empty(const struct file *dir)
+{
+    struct dir_entry e;
+    size_t ofs;
+
+    ASSERT(dir != NULL);
+
+    for (ofs = 0; inode_read_at(dir->inode, &e, sizeof e, ofs) == sizeof e; ofs += sizeof e) {
+        if (e.in_use && strlen(e.name) != 0 && strcmp(e.name, ".") && strcmp(e.name, "..")) { // if name is not empty and it is neither "." nor "..", the directory is not empty
+            return false;
+        }
+    }
+    return true;
+    
+}
+
 /* Searches DIR for a file with the given NAME
  * and returns true if one exists, false otherwise.
  * On success, sets *INODE to an inode for the file, otherwise to
@@ -150,23 +168,23 @@ struct file* parse_dir(const char* dir){
     //Store current directory
     struct file* currentDirectory;
     if(dir[0] == '/'){
-      //Absolute directory
-      if(strlen(dir) == 1) return NULL;
-      currentDirectory = dir_open_root();
-      memmove(directory, directory + 1, strlen(directory));
+        //Absolute directory
+        if(strlen(dir) == 1) return NULL;
+        currentDirectory = dir_open_root();
+        memmove(directory, directory + 1, strlen(directory));
     //   directory = strtok_r(directory, "/", &directory); //Parse the backline
     } else {
-      //Current directory (have to store this info)
-      currentDirectory = dir_open_current();
+        //Current directory (have to store this info)
+        currentDirectory = dir_open_current();
     }
 
     //Parse until end
     while(strlen(directory) > 0){
-      char* nextElmName = strtok_r(directory, "/", &directory); //Parse the next element in directory
-      if(strlen(nextElmName) == 0) {
-        return NULL;
-      }
-      struct inode* nextDirEntry = NULL;
+        char* nextElmName = strtok_r(directory, "/", &directory); //Parse the next element in directory
+        if(strlen(nextElmName) == 0) {
+            return NULL;
+        }
+        struct inode* nextDirEntry = NULL;
 
       //TODO: All dir functions from userprog only work with the root directory, either modify them or create new ones
       if(!dir_lookup(currentDirectory, nextElmName, &nextDirEntry)){return NULL;} //Lookup next element. If lookup failed, return NULL
@@ -213,9 +231,11 @@ struct file* parse_file_name(const char* file) {
     while(strlen(filepath) > 0){
       char* nextElmName = strtok_r(filepath, "/", &filepath); //Parse the next element in directory
       if(strlen(nextElmName) == 0) {
+        dir_close(currentDirectory);
         return NULL;
       }
       else if (strlen(filepath) == 0) {
+        dir_close(currentDirectory);
         return nextElmName;
       }
       else {
@@ -228,7 +248,7 @@ struct file* parse_file_name(const char* file) {
       }
       
     }
-
+    dir_close(currentDirectory);
     return NULL;
 }
 
@@ -301,6 +321,10 @@ dir_remove(struct file *dir, const char *name)
         goto done;
     }
 
+    if(e.inode_sector == thread_current()->curr_dir) {
+        goto done;
+    }
+
     /* Open inode. */
     inode = inode_open(e.inode_sector);
     if (inode == NULL) {
@@ -311,9 +335,9 @@ dir_remove(struct file *dir, const char *name)
     if(inode->data.directory) {
         char name[NAME_MAX + 1];
         struct file *dir = dir_open(inode);
-        if(!dir_readdir(dir, name)) {
+        if(!dir_is_empty(dir)) {
             dir_close(dir);
-            goto done; 
+            return false;
         }
     }
 

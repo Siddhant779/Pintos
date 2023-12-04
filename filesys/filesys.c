@@ -120,7 +120,7 @@ filesys_remove(const char *name)
     char *parsed_name = parse_file_name(name);
     if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
-    bool success = dir != NULL && dir_remove(dir, name);
+    bool success = dir != NULL && dir_remove(dir, parsed_name);
 
     dir_close(dir);
     thread_current()->curr_dir = prev_dir;
