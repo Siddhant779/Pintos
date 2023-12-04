@@ -67,6 +67,8 @@ struct file* parse_dir(const char* dir){
         return NULL;
       }
       struct inode* nextDirEntry = NULL;
+
+      //TODO: All dir functions from userprog only work with the root directory, either modify them or create new ones
       if(!dir_lookup(currentDirectory, nextElmName, &nextDirEntry)){return NULL;} //Lookup next element. If lookup failed, return NULL
       dir_close(currentDirectory);
       currentDirectory = dir_open(nextDirEntry); //Optained inode for next element, open dir from it
@@ -90,7 +92,16 @@ bool syscall_mkdir(const char *dir /* Absolute or relative path to create*/){
   //Determine size of entry
   size_t sizeEntry = 16; //Check if correct
   //Creates dir in the given sector
-  filesys_create(dir, sizeEntry, true);
+  struct dir* getDir = parse_dir(dir);
+
+  //Call inode create and mark it as directory, add to contents of whatever directory it should be in (use parsedir)
+  block_sector_t inode_sector = 0;
+  free_map_allocate(1, &inode_sector);
+  struct inode* newInode = inode_create(inode_sector, sizeEntry, true);
+  struct dir* newDir;
+  newDir->inode = newInode;
+  newDir->pos = 0;
+  //TODO: allocate new dir to the contents of current dir
 }
 
 bool syscall_readdir(int fd, char *name){

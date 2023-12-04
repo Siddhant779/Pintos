@@ -17,6 +17,7 @@
 struct dir {
     struct inode *inode; /* Backing store. */
     off_t         pos;   /* Current position. */
+    //Pos keeps track of which file dir_lookup is looking at, should be 0 as default, so when you create a dir, set it as zero
     // struct dir *parent;
 };
 

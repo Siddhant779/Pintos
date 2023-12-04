@@ -68,6 +68,11 @@ inode_create(block_sector_t sector, off_t length, bool dir)
         disk_inode->magic = INODE_MAGIC;
         //Modify to take data if it is directory or not directory (dir is given when this is called from syscall create)
         disk_inode->directory = dir;
+
+        //TODO: This is a draft of how spaces for contents for entries of a directory will be allocated, change later when inode_disk is changed
+        if(!dir){disk_inode->dirContents == NULL;}
+        else{disk_inode->dirContents = calloc(1, sizeof(struct contents*));} //Allocate a sector for dir contents (idk if corrent)
+
         if (free_map_allocate(sectors, &disk_inode->start)) {
             block_write(fs_device, sector, disk_inode);
             if (sectors > 0) {
