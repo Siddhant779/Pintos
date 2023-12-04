@@ -50,10 +50,9 @@ bool
 filesys_create(const char *name, off_t initial_size, bool dirBool)
 {
     block_sector_t inode_sector = 0;
-    block_sector_t curr_dir = thread_current()->curr_dir;
-    // if(thread_current()->curr_dir == 0) {
-    //     thread_current()->curr_dir = ROOT_DIR_SECTOR;
-    // }
+    block_sector_t prev_dir = thread_current()->curr_dir;
+    char *parsed_name = parse_file_name(name);
+    if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
     //Called with the fill path name (don't put parsing in your syscall) When you read end directory, call inode create
     //Call dir_open until you get to the end, at the end, create an inode (create a separate parse function)
@@ -61,22 +60,23 @@ filesys_create(const char *name, off_t initial_size, bool dirBool)
     bool success = false;
 
     if(dirBool) {
-        success = strlen(name) == 0? false : (dir != NULL 
+        success = strlen(parsed_name) == 0? false : (dir != NULL 
                                                 && free_map_allocate(1, &inode_sector)
                                                 && dir_create(inode_sector, initial_size)
-                                                && dir_add(dir, name, inode_sector));
+                                                && dir_add(dir, parsed_name, inode_sector));
     }
     else {
         success = (dir != NULL
                     && free_map_allocate(1, &inode_sector)
                     && inode_create(inode_sector, initial_size, dirBool) //Modified to accept dir param 
-                    && dir_add(dir, name, inode_sector)); //Modify this to work with directories
+                    && dir_add(dir, parsed_name, inode_sector)); //Modify this to work with directories
     }
 
     if (!success && inode_sector != 0) {
         free_map_release(inode_sector, 1);
     }
     dir_close(dir);
+    thread_current()->curr_dir = prev_dir;
 
     return success;
 }
@@ -89,13 +89,17 @@ filesys_create(const char *name, off_t initial_size, bool dirBool)
 struct file *
 filesys_open(const char *name)
 {
+    block_sector_t prev_dir = thread_current()->curr_dir;
+    char *parsed_name = parse_file_name(name);
+    if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
     struct inode *inode = NULL;
 
     if (dir != NULL) {
-        dir_lookup(dir, name, &inode);
+        dir_lookup(dir, parsed_name, &inode);
     }
     dir_close(dir);
+    thread_current()->curr_dir = prev_dir;
 
     return file_open(inode);
 }
@@ -107,10 +111,15 @@ filesys_open(const char *name)
 bool
 filesys_remove(const char *name)
 {
+    if(strcmp(name, "/") == 0) return false; // auto-fail removal if removing root
+    block_sector_t prev_dir = thread_current()->curr_dir;
+    char *parsed_name = parse_file_name(name);
+    if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
     bool success = dir != NULL && dir_remove(dir, name);
 
     dir_close(dir);
+    thread_current()->curr_dir = prev_dir;
 
     return success;
 }

@@ -41,51 +41,20 @@ bool syscall_readdir(int fd, char *name);
 bool syscall_isdir(int fd);
 int syscall_inumber(int fd);
 
-//Given a relative or absolute directory, returns the struct dir of the destination
-struct file* parse_dir(const char* dir){
-  
-    //String to parse (makes sure strtok doesn't mess it up)
-    // char* directory = palloc_get_page(0);
-    // strlcpy(directory, dir, strlen(dir));
-    char *directory = dir;
-
-    //Store current directory
-    struct file* currentDirectory;
-    if(dir[0] == '/'){
-      //Absolute directory
-      currentDirectory = dir_open_root();
-      strtok_r(directory, "/", &directory); //Parse the backline
-    } else {
-      //Current directory (have to store this info)
-      currentDirectory = dir_open_current();
-    }
-
-    //Parse until end
-    while(strlen(directory) > 0){
-      char* nextElmName = strtok_r(directory, "/", &directory); //Parse the next element in directory
-      if(strlen(nextElmName) == 0) {
-        return NULL;
-      }
-      struct inode* nextDirEntry = NULL;
-
-      //TODO: All dir functions from userprog only work with the root directory, either modify them or create new ones
-      if(!dir_lookup(currentDirectory, nextElmName, &nextDirEntry)){return NULL;} //Lookup next element. If lookup failed, return NULL
-      dir_close(currentDirectory);
-      currentDirectory = dir_open(nextDirEntry); //Optained inode for next element, open dir from it
-    }
-
-    return currentDirectory;
-}
-
 //Filesys functions
 bool syscall_chdir(const char *dir){ //This is responsible for moving down directories
   //Navigate to new dir
+  bool success = false;
+  block_sector_t prev_dir = thread_current()->curr_dir;
   struct file* newDir = parse_dir(dir);
-  if(newDir == NULL){return false;}
-
-  //Get and change thread's current dir
-  struct thread* currentThread = thread_current();
-  currentThread->curr_dir = newDir->inode->sector;
+  if(newDir == NULL){
+    thread_current()->curr_dir = prev_dir;
+    success = false;
+  }
+  else {
+    success = true;
+  }
+  return success;
 }
 
 bool syscall_mkdir(const char *dir /* Absolute or relative path to create*/){

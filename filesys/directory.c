@@ -150,6 +150,87 @@ dir_lookup(const struct file *dir, const char *name,
     return *inode != NULL;
 }
 
+//Given a relative or absolute directory, parses it and returns a directory for it
+struct file* parse_dir(const char* dir){
+  
+    //String to parse (makes sure strtok doesn't mess it up)
+    // char* directory = palloc_get_page(0);
+    // strlcpy(directory, dir, strlen(dir));
+    char *directory = dir;
+
+    //Store current directory
+    struct file* currentDirectory;
+    if(dir[0] == '/'){
+      //Absolute directory
+      if(strlen(dir) == 1) return NULL;
+      currentDirectory = dir_open_root();
+      directory = strtok_r(directory, "/", &directory); //Parse the backline
+    } else {
+      //Current directory (have to store this info)
+      currentDirectory = dir_open_current();
+    }
+
+    //Parse until end
+    while(strlen(directory) > 0){
+      char* nextElmName = strtok_r(directory, "/", &directory); //Parse the next element in directory
+      if(strlen(nextElmName) == 0) {
+        return NULL;
+      }
+      struct inode* nextDirEntry = NULL;
+
+      //TODO: All dir functions from userprog only work with the root directory, either modify them or create new ones
+      if(!dir_lookup(currentDirectory, nextElmName, &nextDirEntry)){return NULL;} //Lookup next element. If lookup failed, return NULL
+      dir_close(currentDirectory);
+      currentDirectory = dir_open(nextDirEntry); //Optained inode for next element, open dir from it
+      thread_current()->curr_dir = nextDirEntry->sector;
+    }
+
+    return currentDirectory;
+}
+
+//Given a relative or absolute directory, goes into the last file and returns name of the file 
+struct file* parse_file_name(const char* file) {
+  
+    //String to parse (makes sure strtok doesn't mess it up)
+    // char* filepath = palloc_get_page(0);
+    // strlcpy(filepath, file, strlen(file));
+    char* filepath = file;
+
+    //Store current directory
+    struct file* currentDirectory;
+
+    if(filepath[0] == '/'){
+      //Absolute directory
+      currentDirectory = dir_open_root();
+      filepath = strtok_r(filepath, "/", &filepath);
+    } else {
+      //Current directory (have to store this info)
+      currentDirectory = dir_open_current();
+    }
+
+    //Parse until end
+    while(strlen(filepath) > 0){
+      char* nextElmName = strtok_r(filepath, "/", &filepath); //Parse the next element in directory
+      if(strlen(nextElmName) == 0) {
+        return NULL;
+      }
+      else if (strlen(filepath) == 0) {
+        return nextElmName;
+      }
+      else {
+        struct inode* nextDirEntry = NULL;
+        //TODO: All dir functions from userprog only work with the root directory, either modify them or create new ones
+        if(!dir_lookup(currentDirectory, nextElmName, &nextDirEntry)){return NULL;} //Lookup next element. If lookup failed, return NULL
+        dir_close(currentDirectory);
+        currentDirectory = dir_open(nextDirEntry); //Optained inode for next element, open dir from it
+        thread_current()->curr_dir = nextDirEntry->sector;
+      }
+      
+    }
+
+    return NULL;
+}
+
 /* Adds a file named NAME to DIR, which must not already contain a
  * file by that name.  The file's inode is in sector
  * INODE_SECTOR.
