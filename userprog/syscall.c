@@ -4,6 +4,7 @@
 
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/directory.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h"
@@ -22,7 +23,7 @@ void get_args_stack(int args_needed, struct intr_frame *f, int *arg_v);
 void syscall_halt(void);
 pid_t syscall_exec(const char* cmdline);
 bool syscall_remove(const char* file_name);
-bool syscall_create(const char* file_name, unsigned starting_size);
+bool syscall_create(const char* file_name, unsigned starting_size, bool isDir);
 int syscall_open(const char *file_name);
 int syscall_filesize(int fd);
 void syscall_seek (int fd, unsigned new_position);
@@ -32,39 +33,43 @@ int syscall_read (int fd, void *buffer, unsigned size);
 int syscall_write (int fd, const void *buffer, unsigned size);
 int syscall_wait (pid_t pid);
 void valid_ptr(void *v_ptr);
-bool syscall_create(const char* file_name, unsigned starting_size);
 
 //Filesys headers
 bool syscall_chdir(const char *dir);
-bool syscall_mkdir(const char *dir);
+bool syscall_mkdir(const char* dir_name);
 bool syscall_readdir(int fd, char *name);
 bool syscall_isdir(int fd);
 int syscall_inumber(int fd);
 
 //Given a relative or absolute directory, returns the struct dir of the destination
-struct dir* parse_dir(const char* dir){
+struct file* parse_dir(const char* dir){
   
     //String to parse (makes sure strtok doesn't mess it up)
-    char* directory = strlcpy(directory, dir, strlen(dir));
+    // char* directory = palloc_get_page(0);
+    // strlcpy(directory, dir, strlen(dir));
+    char *directory = dir;
 
     //Store current directory
-    struct dir* currentDirectory;
-    if(dir[0] == '\\'){
+    struct file* currentDirectory;
+    if(dir[0] == '/'){
       //Absolute directory
       currentDirectory = dir_open_root();
-      strtok_r(directory, "\\", &directory); //Parse the backline
+      strtok_r(directory, "/", &directory); //Parse the backline
     } else {
       //Current directory (have to store this info)
-      currentDirectory = thread_current()->currDirectory;
+      currentDirectory = dir_open_current();
     }
 
     //Parse until end
     while(strlen(directory) > 0){
-      char* nextElmName = strtok_r(directory, "\\", &directory); //Parse the next element in directory
+      char* nextElmName = strtok_r(directory, "/", &directory); //Parse the next element in directory
+      if(strlen(nextElmName) == 0) {
+        return NULL;
+      }
       struct inode* nextDirEntry = NULL;
       if(!dir_lookup(currentDirectory, nextElmName, &nextDirEntry)){return NULL;} //Lookup next element. If lookup failed, return NULL
+      dir_close(currentDirectory);
       currentDirectory = dir_open(nextDirEntry); //Optained inode for next element, open dir from it
-      dir_close(nextDirEntry);
     }
 
     return currentDirectory;
@@ -73,24 +78,25 @@ struct dir* parse_dir(const char* dir){
 //Filesys functions
 bool syscall_chdir(const char *dir){ //This is responsible for moving down directories
   //Navigate to new dir
-  struct dir* newDir = parse_dir(dir);
+  struct file* newDir = parse_dir(dir);
   if(newDir == NULL){return false;}
 
   //Get and change thread's current dir
   struct thread* currentThread = thread_current();
-  currentThread->currDirectory = newDir;
+  currentThread->curr_dir = newDir->inode->sector;
 }
 
 bool syscall_mkdir(const char *dir /* Absolute or relative path to create*/){
   //Determine size of entry
   size_t sizeEntry = 16; //Check if correct
-
   //Creates dir in the given sector
   filesys_create(dir, sizeEntry, true);
 }
 
 bool syscall_readdir(int fd, char *name){
-
+  bool success = false;
+  //put logic here
+  return success;
 }
 
 //Determine if file descriptor is a directory
@@ -239,14 +245,17 @@ struct file* get_file_pointer(int fd) {
 }
 
 bool
-syscall_create(const char* file_name, unsigned starting_size)
+syscall_create(const char* file_name, unsigned starting_size, bool isDir)
 {
   //calls filesys create function in filesys.c for creating a new file
   //lock for when accessing files 
-  lock_acquire(&sys_lock);
-  bool create = filesys_create(file_name, starting_size, false);
-  lock_release(&sys_lock);
-  return create;
+  bool created = false;
+  if(strlen(file_name) > 0) {
+    lock_acquire(&sys_lock);
+    created = filesys_create(file_name, starting_size, isDir);
+    lock_release(&sys_lock);
+  }
+  return created;
 }
 
 bool
@@ -378,6 +387,12 @@ void syscall_halt() {
   //syscall halt 
     shutdown_power_off();
 }
+
+
+
+
+
+
 void get_args_stack(int args_needed, struct intr_frame *f, int *arg_v) {
     // first increments the pointer and gets the value - this is because we got the signal at the very beginning - opposite of what pop usually does 
     int *ptr;
@@ -473,7 +488,7 @@ syscall_handler(struct intr_frame *f UNUSED)
         }
         args_v[0] = (int)ptr; // gets the actual address 
         //syscall create returns a bool so store that in eax
-        f->eax = syscall_create((const char *)args_v[0], (unsigned)args_v[1]);
+        f->eax = syscall_create((const char *)args_v[0], (unsigned)args_v[1], false);
         
     } else if(signal == SYS_EXEC) {
 
@@ -577,23 +592,37 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     //Filesys Syscalls
     else if(signal == SYS_CHDIR){
-
+      get_args_stack(1,f, &args_v[0]);
+      void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+      if(ptr == NULL) {
+        return syscall_exit(-1);
+      }
+      args_v[0] = (int)ptr; // gets the actual address 
+      f->eax = syscall_chdir((const char *)args_v[0]);
     }
     
     else if(signal == SYS_MKDIR){
-
+      get_args_stack(1,f, &args_v[0]);
+      // get the physical address for the pointer to the file
+      void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+      if(ptr == NULL) {
+        return syscall_exit(-1);
+      }
+      args_v[0] = (int)ptr; // gets the actual address 
+      //syscall create returns a bool so store that in eax
+      f->eax = syscall_mkdir((const char *)args_v[0]);
     }
 
     else if(signal == SYS_READDIR){
-
+      f->eax = false;
     }
 
     else if(signal == SYS_ISDIR){
-
+      f->eax = false;
     }
 
     else if(signal == SYS_INUMBER){
-
+      f->eax = false;
     }
 
 }

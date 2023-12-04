@@ -117,7 +117,8 @@ struct thread {
     struct file *file;
     
     //Store thread's current directory
-    struct dir* currDirectory;
+    // struct file* currDirectory;
+    block_sector_t *curr_dir;
 };
 
 /* If false (default), use round-robin scheduler.
@@ -131,7 +132,7 @@ void thread_tick(void);
 void thread_print_stats(void);
 
 typedef void thread_func (void *aux);
-tid_t thread_create(const char *name, int priority, thread_func *, void *, struct dir*);
+tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
 void thread_unblock(struct thread *);
