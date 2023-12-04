@@ -89,6 +89,10 @@ filesys_create(const char *name, off_t initial_size, bool dirBool)
 struct file *
 filesys_open(const char *name)
 {
+    // special case to open root node
+    if(strcmp(name, "/") == 0) {
+        return dir_open_root();
+    }
     block_sector_t prev_dir = thread_current()->curr_dir;
     char *parsed_name = parse_file_name(name);
     if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;

@@ -126,6 +126,10 @@ int syscall_write (int fd, const void *buffer, unsigned size) {
       putbuf (buffer, size);
       return size;
     }
+    //fail writes to dirs
+    if(syscall_isdir(fd)) {
+      return -1; 
+    }
     
     // start writing to file
     //get lock here 
