@@ -91,17 +91,7 @@ bool syscall_chdir(const char *dir){ //This is responsible for moving down direc
 bool syscall_mkdir(const char *dir /* Absolute or relative path to create*/){
   //Determine size of entry
   size_t sizeEntry = 16; //Check if correct
-  //Creates dir in the given sector
-  struct dir* getDir = parse_dir(dir);
-
-  //Call inode create and mark it as directory, add to contents of whatever directory it should be in (use parsedir)
-  block_sector_t inode_sector = 0;
-  free_map_allocate(1, &inode_sector);
-  struct inode* newInode = inode_create(inode_sector, sizeEntry, true);
-  struct dir* newDir;
-  newDir->inode = newInode;
-  newDir->pos = 0;
-  //TODO: allocate new dir to the contents of current dir
+  return filesys_create(dir, sizeEntry, true);
 }
 
 bool syscall_readdir(int fd, char *name){
