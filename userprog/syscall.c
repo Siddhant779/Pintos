@@ -588,11 +588,23 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
 
     else if(signal == SYS_ISDIR){
-      f->eax = false;
+      get_args_stack(1,f, &args_v[0]);
+      void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+      if(ptr == NULL) {
+        return syscall_exit(-1);
+      }
+      args_v[0] = (int)ptr; // gets the actual address 
+      f->eax = syscall_isdir((const char *)args_v[0]);
     }
 
     else if(signal == SYS_INUMBER){
-      f->eax = false;
+      get_args_stack(1,f, &args_v[0]);
+      void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+      if(ptr == NULL) {
+        return syscall_exit(-1);
+      }
+      args_v[0] = (int)ptr; // gets the actual address 
+      f->eax = syscall_inumber((const char *)args_v[0]);
     }
 
 }

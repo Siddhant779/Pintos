@@ -34,20 +34,7 @@ dir_create(block_sector_t sector, size_t entry_cnt)
 struct file *
 dir_open(struct inode *inode)
 {
-    struct file *dir = calloc(1, sizeof *dir);
-
-    if (inode != NULL && dir != NULL) {
-        dir->inode = inode;
-        dir->pos = 0;
-        dir->is_directory = true;
-        dir->deny_write = false;
-        // thread_current()->curr_dir = inode->sector;
-        return dir;
-    } else {
-        inode_close(inode);
-        free(dir);
-        return NULL;
-    }
+    return file_open(inode);
 }
 
 /* Opens the root directory and returns a directory for it.
