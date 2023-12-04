@@ -156,7 +156,9 @@ struct file* parse_dir(const char* dir){
     //String to parse (makes sure strtok doesn't mess it up)
     // char* directory = palloc_get_page(0);
     // strlcpy(directory, dir, strlen(dir));
-    char *directory = dir;
+    char* directory;
+    directory = palloc_get_page(0);
+    strlcpy(directory, dir, strlen(dir) + 1);
 
     //Store current directory
     struct file* currentDirectory;
@@ -164,7 +166,8 @@ struct file* parse_dir(const char* dir){
       //Absolute directory
       if(strlen(dir) == 1) return NULL;
       currentDirectory = dir_open_root();
-      directory = strtok_r(directory, "/", &directory); //Parse the backline
+      memmove(directory, directory + 1, strlen(directory));
+    //   directory = strtok_r(directory, "/", &directory); //Parse the backline
     } else {
       //Current directory (have to store this info)
       currentDirectory = dir_open_current();
@@ -188,13 +191,23 @@ struct file* parse_dir(const char* dir){
     return currentDirectory;
 }
 
+void parse_file_path(char *file_path) {
+    char* slashPosition = strchr(file_path, '/');
+
+    if (slashPosition != NULL) {
+        ++slashPosition;
+        memmove(file_path, slashPosition, strlen(slashPosition) + 1);
+    }
+}
+
 //Given a relative or absolute directory, goes into the last file and returns name of the file 
 struct file* parse_file_name(const char* file) {
   
     //String to parse (makes sure strtok doesn't mess it up)
     // char* filepath = palloc_get_page(0);
-    // strlcpy(filepath, file, strlen(file));
-    char* filepath = file;
+    char* filepath;
+    filepath = palloc_get_page(0);
+    strlcpy(filepath, file, strlen(file) + 1);
 
     //Store current directory
     struct file* currentDirectory;
@@ -202,7 +215,8 @@ struct file* parse_file_name(const char* file) {
     if(filepath[0] == '/'){
       //Absolute directory
       currentDirectory = dir_open_root();
-      filepath = strtok_r(filepath, "/", &filepath);
+      thread_current()->curr_dir = ROOT_DIR_SECTOR;
+      memmove(filepath, filepath + 1, strlen(filepath));
     } else {
       //Current directory (have to store this info)
       currentDirectory = dir_open_current();
