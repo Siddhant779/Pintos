@@ -51,8 +51,9 @@ filesys_create(const char *name, off_t initial_size, bool dirBool)
 {
     block_sector_t inode_sector = 0;
     block_sector_t prev_dir = thread_current()->curr_dir;
-    char *parsed_name = parse_file_name(name);
-    if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;
+    char parsed_name[NAME_MAX + 1];
+    bool parsed = parse_file_name(name, parsed_name);
+    if(!parsed || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
     //Called with the fill path name (don't put parsing in your syscall) When you read end directory, call inode create
     //Call dir_open until you get to the end, at the end, create an inode (create a separate parse function)
@@ -94,8 +95,9 @@ filesys_open(const char *name)
         return dir_open_root();
     }
     block_sector_t prev_dir = thread_current()->curr_dir;
-    char *parsed_name = parse_file_name(name);
-    if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;
+    char parsed_name[NAME_MAX + 1];
+    bool parsed = parse_file_name(name, parsed_name);
+    if(!parsed || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
     struct inode *inode = NULL;
 
@@ -117,8 +119,9 @@ filesys_remove(const char *name)
 {
     if(strcmp(name, "/") == 0) return false; // auto-fail removal if removing root
     block_sector_t prev_dir = thread_current()->curr_dir;
-    char *parsed_name = parse_file_name(name);
-    if(parsed_name == NULL || strlen(parsed_name) == 0) return NULL;
+    char parsed_name[NAME_MAX + 1];
+    bool parsed = parse_file_name(name, parsed_name);
+    if(!parsed || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
     bool success = dir != NULL && dir_remove(dir, parsed_name);
 

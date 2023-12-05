@@ -41,7 +41,7 @@ struct inode *dir_get_inode(struct file *);
 /* Reading and writing. */
 bool dir_lookup(const struct file *, const char *name, struct inode **);
 struct file* parse_dir(const char* dir);
-struct file* parse_file_name(const char* file);
+bool parse_file_name(const char* file, char name[NAME_MAX + 1]);
 bool dir_add(struct file *, const char *name, block_sector_t);
 bool dir_remove(struct file *, const char *name);
 bool dir_readdir(struct file *, char name[NAME_MAX + 1]);

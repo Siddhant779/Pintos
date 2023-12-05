@@ -206,11 +206,14 @@ void parse_file_path(char *file_path) {
 }
 
 //Given a relative or absolute directory, goes into the last file and returns name of the file 
-struct file* parse_file_name(const char* file) {
+bool parse_file_name(const char* file, char name[NAME_MAX + 1]) {
   
     //String to parse (makes sure strtok doesn't mess it up)
     // char* filepath = palloc_get_page(0);
+    if(strlen(file) > NAME_MAX || strlen(file) == 0) return false; // do not parse filepaths that are too long or are empty
+    bool first = true;
     char* filepath;
+    char *token;
     filepath = palloc_get_page(0);
     strlcpy(filepath, file, strlen(file) + 1);
 
@@ -228,15 +231,20 @@ struct file* parse_file_name(const char* file) {
     }
 
     //Parse until end
-    while(strlen(filepath) > 0){
-      char* nextElmName = strtok_r(filepath, "/", &filepath); //Parse the next element in directory
+    while(strlen(token) > 0){
+      char *temp = first? filepath : NULL;
+      char* nextElmName = strtok_r(temp, "/", &token); //Parse the next element in directory
+      first = false;
       if(strlen(nextElmName) == 0) {
         dir_close(currentDirectory);
-        return NULL;
+        return false;
       }
-      else if (strlen(filepath) == 0) {
+      else if (strlen(token) == 0) {
+        // char *result;
+        strlcpy(name, nextElmName, strlen(nextElmName) + 1);
+        palloc_free_page(filepath);
         dir_close(currentDirectory);
-        return nextElmName;
+        return true;
       }
       else {
         struct inode* nextDirEntry = NULL;
@@ -249,7 +257,7 @@ struct file* parse_file_name(const char* file) {
       
     }
     dir_close(currentDirectory);
-    return NULL;
+    return false;
 }
 
 /* Adds a file named NAME to DIR, which must not already contain a
