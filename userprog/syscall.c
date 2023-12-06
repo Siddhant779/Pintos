@@ -67,7 +67,7 @@ bool syscall_mkdir(const char *dir /* Absolute or relative path to create*/){
 
 bool syscall_readdir(int fd, char *name){
     //Assume dir is a type of file, get directory
-  struct file* dir = file_open(fd);
+  struct file* dir = get_file_pointer(fd);
   if(dir == NULL){return false;}
 
   //Save original position
@@ -78,7 +78,7 @@ bool syscall_readdir(int fd, char *name){
   //printf("file name: %s\n" + name);
 
   //Skip over "." and ".."
-  if(strcmp(name, ".") == 0 || strcmp(name, "..") == 0){
+  while(strcmp(name, ".") == 0 || strcmp(name, "..") == 0){
     if(!dir_readdir(dir, name)){return false;} //End of dir
     //printf("file name: %s\n" + name);
   }
@@ -651,7 +651,14 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
 
     else if(signal == SYS_READDIR){
-      f->eax = false;
+      get_args_stack(1,f, &args_v[0]);
+      //void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+      //if(ptr == NULL) {
+        //return syscall_exit(-1);
+      //}
+      //args_v[0] = (int)ptr; // gets the actual address 
+      f->eax = syscall_readdir((int *)args_v[0], (const char *)args_v[1]);
+      //f->eax = false;
     }
 
     else if(signal == SYS_ISDIR){
