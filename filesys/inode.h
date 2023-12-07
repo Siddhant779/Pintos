@@ -13,9 +13,9 @@ struct bitmap;
 #define INDIRECT_BLOCKS 1
 #define DOUBLE_INDIRECT_BLOCKS 1
 
-#define DIRECT_INDEX 0
-#define INDIRECT_INDEX 119
-#define DOUBLE_INDIRECT_INDEX 120
+#define DIRECT_BLOCK_INDEX 0
+#define INDIRECT_BLOCK_INDEX 119
+#define DOUBLE_INDIRECT_BLOCK_INDEX 120
 
 #define ROOT_DIR_INDEX 1
 
@@ -32,9 +32,9 @@ struct inode_disk {
     //How it works before filesys, it only looks through the root dir, make it look thru each part of directory path
     off_t          length;      /* File size in bytes. */
     unsigned       magic;       /* Magic number. */
-    uint32_t       direct_index;
-    uint32_t       indirect_index;
-    uint32_t       double_indirect_index;
+    uint32_t       direct_inode_index;
+    uint32_t       indirect_inode_index;
+    uint32_t       double_indirect_inode_index;
     block_sector_t block_array[TOTAL_BLOCKS_SIZE];
 
     bool directory; /* Inode is directory or file */
@@ -64,7 +64,7 @@ struct inode {
     block_sector_t    sector;         /* Sector number of disk location. */
     int               open_cnt;       /* Number of openers. */
     bool              removed;        /* True if deleted, false otherwise. */
-    off_t             read_length;
+    off_t             read_at_length;
     int               deny_write_cnt; /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;           /* Inode content. */
     /* Access bool directory thru inode.data field, that pointd to an inode_disk with that info */
