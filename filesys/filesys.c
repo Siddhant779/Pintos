@@ -123,6 +123,13 @@ filesys_remove(const char *name)
     bool parsed = parse_file_name(name, parsed_name);
     if(!parsed || strlen(parsed_name) == 0) return NULL;
     struct file *dir = dir_open_current();
+    //if the file being removed is the cwd, fail the removal
+    if(dir_find_sector(dir, parsed_name) == prev_dir) {
+        dir_close(dir);
+        thread_current()->curr_dir = prev_dir;
+        return false;
+    }
+    
     bool success = dir != NULL && dir_remove(dir, parsed_name);
 
     dir_close(dir);

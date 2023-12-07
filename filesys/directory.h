@@ -40,6 +40,7 @@ struct inode *dir_get_inode(struct file *);
 
 /* Reading and writing. */
 bool dir_lookup(const struct file *, const char *name, struct inode **);
+block_sector_t dir_find_sector(const struct file *dir, const char *name);
 struct file* parse_dir(const char* dir);
 bool parse_file_name(const char* file, char name[NAME_MAX + 1]);
 bool dir_add(struct file *, const char *name, block_sector_t);
