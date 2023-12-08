@@ -8,8 +8,10 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@utexas.edu>
-FirstName LastName <email@utexas.edu>
+Siyuan (Tim) Chen timchenut567@utexas.edu
+Saumya Jain saumyajain@utexas.edu
+David Li davidli216@utexas.edu
+Siddhant Pandit panditsiddhant.sp@utexas.edu
 
 ---- PRELIMINARIES ----
 
@@ -49,24 +51,48 @@ FirstName LastName <email@utexas.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-We added a new directory boolean to the directory struct, this allows for determining if an inode is file or directory.
+Added 
+    bool          is_directory;
+    block_sector_t  *parent;  /* Pointer to directory that contains the file */
+to struct file:
+    -isdirectory differentiates directories from files for file processing purposes.
+    -parent points to the block sector of whatever directory holds the file, for use in finding files.
 
-In inode_disk, we added added additional fields direct_index, indirect_index, and doubly_indirect_index. These keep track of indirect and doubly_indirect blocks. 
+Added
+    block_sector_t curr_dir
+to struct thread:
+    -curr_dir represents the block sector of the thread's current working directory and can be used to open 
+     the current working directory.
+
+Removed struct dir and changed all directories to be of type struct file to make syscalls with directories easier
+to implement.
+
+
 
 ---- ALGORITHMS ----
 
 >> B2: Describe your code for traversing a user-specified path.  How
 >> do traversals of absolute and relative paths differ?
 
-Traversals of absolute path will start from the root directory and traverse from there while traversals from a relative path will first get the inode of thread's path and traverse from there.
+Traversals of absolute path will start from the root directory and traverse from there while traversals from a relative path 
+will first get the inode of thread's path and traverse from there.
 
-First, I check relative/absolute by what the char input starts as. To parse through the directory after, I used strtok_r to parse every level of the directory, closing the current directory and opening the next directory if lookup is able to find it.
-In the end, I return the final file if successful and null if not.
+First, we check relative/absolute by what the char input starts as. If the path starts with '/', we remove this first character
+from the path and set the current directory to the root directory. We can then continue to parse the path normally. To parse 
+through the directory after, we used strtok_r to parse every level of the directory, closing the current directory and opening 
+the next directory if lookup is able to find it.For every level of directory, the thread's current directory is set to the newly 
+opened directory. Finally, when the last file in the path is reached, the name of that file is returned.
 
 ---- RATIONALE ----
 
 >> B6: Explain why you chose to represent the current directory of a
 >> process the way you did.
+We added a block_sector_t variable called "curr_dir" to the thread struct, which corresponds to the block block_sector
+of the current working directory. The block_sector_t can be used to open an inode which can in turn be used to open the
+directory. We chose to represent curr_dir as a block_sector_t because block sectors are permanent and are always associated
+with the directory.  This way, the current directory can be opened and closed anytime it is needed while still being able to be
+accessed unconditionally. We also considered using struct inode or struct file to represent the current directory, however these 
+data structures can be opened or closed at any time and are temporary, making it difficult to consistently access them.
 
                            SURVEY QUESTIONS
                            ================
