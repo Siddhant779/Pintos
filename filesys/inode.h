@@ -38,6 +38,7 @@ struct inode_disk {
     block_sector_t block_array[TOTAL_BLOCKS_SIZE];
 
     bool directory; /* Inode is directory or file */
+    bool used;
 
     //we could just store the struct dir pointer 
     //struct dir* entry;
