@@ -49,10 +49,19 @@ FirstName LastName <email@utexas.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+We added a new directory boolean to the directory struct, this allows for determining if an inode is file or directory.
+
+In inode_disk, we added added additional fields direct_index, indirect_index, and doubly_indirect_index. These keep track of indirect and doubly_indirect blocks. 
+
 ---- ALGORITHMS ----
 
 >> B2: Describe your code for traversing a user-specified path.  How
 >> do traversals of absolute and relative paths differ?
+
+Traversals of absolute path will start from the root directory and traverse from there while traversals from a relative path will first get the inode of thread's path and traverse from there.
+
+First, I check relative/absolute by what the char input starts as. To parse through the directory after, I used strtok_r to parse every level of the directory, closing the current directory and opening the next directory if lookup is able to find it.
+In the end, I return the final file if successful and null if not.
 
 ---- RATIONALE ----
 
