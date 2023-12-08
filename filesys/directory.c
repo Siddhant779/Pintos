@@ -132,6 +132,25 @@ dir_is_empty(const struct file *dir)
     
 }
 
+/* If dir contains a file named name, return the block sector of that inode, else return zero */
+block_sector_t
+dir_find_sector(const struct file *dir, const char *name)
+{
+    struct dir_entry e;
+    size_t ofs;
+
+    ASSERT(dir != NULL);
+    ASSERT(name != NULL);
+
+    for (ofs = 0; inode_read_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
+         ofs += sizeof e) {
+        if (e.in_use && !strcmp(name, e.name)) {
+            return e.inode_sector;
+        }
+    }
+    return -1;
+}
+
 /* Searches DIR for a file with the given NAME
  * and returns true if one exists, false otherwise.
  * On success, sets *INODE to an inode for the file, otherwise to
@@ -162,16 +181,21 @@ struct file* parse_dir(const char* dir){
     // char* directory = palloc_get_page(0);
     // strlcpy(directory, dir, strlen(dir));
     char* directory;
-    directory = palloc_get_page(0);
+    // directory = palloc_get_page(0);
+    directory = dir;
+
     strlcpy(directory, dir, strlen(dir) + 1);
 
     //Store current directory
     struct file* currentDirectory;
     if(dir[0] == '/'){
         //Absolute directory
-        if(strlen(dir) == 1) return NULL;
+        // if(strlen(dir) == 1) return NULL;
         currentDirectory = dir_open_root();
         memmove(directory, directory + 1, strlen(directory));
+        if(strlen(directory) == 0) {
+            return dir_open_current();
+        }
     //   directory = strtok_r(directory, "/", &directory); //Parse the backline
     } else {
         //Current directory (have to store this info)
@@ -225,6 +249,10 @@ bool parse_file_name(const char* file, char name[NAME_MAX + 1]) {
       currentDirectory = dir_open_root();
       thread_current()->curr_dir = ROOT_DIR_SECTOR;
       memmove(filepath, filepath + 1, strlen(filepath));
+      if(strlen(filepath) == 0) {
+        strlcpy(name, ".", 1);
+        return true;
+      }
     } else {
       //Current directory (have to store this info)
       currentDirectory = dir_open_current();

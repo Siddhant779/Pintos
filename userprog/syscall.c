@@ -72,7 +72,9 @@ bool syscall_readdir(int fd, char *name){
 
   //Save original position
   off_t originalPos = dir->pos;
-
+  // if(!dir->is_directory) {
+  //   return false;
+  // }
   //Read current entry as denoted by pos, test the read for if data is correct
   if(!dir_readdir(dir, name)){return false;}
   //printf("file name: %s\n" + name);
@@ -126,7 +128,7 @@ int syscall_inumber(int fd){
   if(fileInode == NULL){return false;}
 
   //Test if directory
-  return fileInode->data.start;
+  return fileInode->sector;
 }
 
 //Userprog functions
@@ -365,7 +367,7 @@ pid_t syscall_exec(const char* cmdline) {
 }
 //makes sure that the virtual address is a valid user address
 void valid_ptr(void *pointer) {
-    if (!is_user_vaddr(pointer))
+    if (!is_user_vaddr(pointer) || pointer < USER_VADDR_BOTTOM)
     {
       // virtual memory address is not reserved for us (out of bound)
       syscall_exit(-1);
@@ -390,20 +392,6 @@ void syscall_halt() {
 }
 
 
-
-
-
-
-void get_args_stack(int args_needed, struct intr_frame *f, int *arg_v) {
-    // first increments the pointer and gets the value - this is because we got the signal at the very beginning - opposite of what pop usually does 
-    int *ptr;
-    for (int i = 0; i < args_needed; i++)
-    {
-        ptr = (int *) f->esp + i + 1;
-        valid_ptr((void *) ptr);
-        arg_v[i] = *ptr;
-    }
-}
 // this code get_user was provided by the pintos documentation
 /* Reads a byte at user virtual address UADDR.
    UADDR must be below PHYS_BASE.
@@ -416,6 +404,23 @@ get_user (const uint8_t *uaddr)
   asm ("movl $1f, %0; movzbl %1, %0; 1:"
        : "=&a" (result) : "m" (*uaddr));
   return result;
+}
+
+
+
+void get_args_stack(int args_needed, struct intr_frame *f, int *arg_v) {
+    // first increments the pointer and gets the value - this is because we got the signal at the very beginning - opposite of what pop usually does 
+    int *ptr;
+    for (int i = 0; i < args_needed; i++)
+    {
+        ptr = (int *) f->esp + i + 1;
+        valid_ptr((void *) ptr);
+        int value  = get_user((void *) ptr);
+        if(value == -1) {
+          syscall_exit(-1);
+        }
+        arg_v[i] = *ptr;
+    }
 }
  
 // this code put_user was provided by the pintos documentation
@@ -651,13 +656,18 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
 
     else if(signal == SYS_READDIR){
-      get_args_stack(1,f, &args_v[0]);
-      //void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
-      //if(ptr == NULL) {
-        //return syscall_exit(-1);
-      //}
-      //args_v[0] = (int)ptr; // gets the actual address 
+      // int fd;
+      // char *name;
+      // memory_copy(f->esp+4, &fd, sizeof(fd));
+      // memory_copy(f->esp+8, &name, sizeof(name));
+      get_args_stack(2,f, &args_v[0]);
+      // void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+      // if(ptr == NULL) {
+      //   return syscall_exit(-1);
+      // }
+      // args_v[0] = (int)ptr; // gets the actual address 
       f->eax = syscall_readdir((int *)args_v[0], (const char *)args_v[1]);
+      //f->eax = syscall_readdir((int *)fd, (char *)name);
       //f->eax = false;
     }
 
@@ -673,11 +683,11 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     else if(signal == SYS_INUMBER){
       get_args_stack(1,f, &args_v[0]);
-      void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
-      if(ptr == NULL) {
-        return syscall_exit(-1);
-      }
-      args_v[0] = (int)ptr; // gets the actual address 
+      // void *ptr = pagedir_get_page(thread_current()->pagedir, (const void *) args_v[0]);
+      // if(ptr == NULL) {
+      //   return syscall_exit(-1);
+      // }
+      // args_v[0] = (int)ptr; // gets the actual address 
       f->eax = syscall_inumber((const char *)args_v[0]);
     }
 
