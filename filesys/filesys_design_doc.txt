@@ -42,6 +42,11 @@ Siddhant Pandit panditsiddhant.sp@utexas.edu
 >> structure, and what advantages and disadvantages does your
 >> structure have, compared to a multilevel index?
 
+Our code utilizes a multilevel index structure. We mainly used direct blocks to maintain mapping 
+directly to data points on the disk. For example, the "start" block in the "inode_disk" struct is 
+directly mapped. There is also a singly indirect block and a doubly indirect block. We used these 
+to create directory blocks, bitmap blocks, and data blocks. 
+
                             SUBDIRECTORIES
                             ==============
 
