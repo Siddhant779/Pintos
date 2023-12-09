@@ -189,7 +189,6 @@ fsutil_append(char **argv)
     }
 
     /* Open source file. */
-    //printf("file name: %s\n\n\n");
     src = filesys_open(file_name);
     if (src == NULL) {
         PANIC("%s: open failed", file_name);

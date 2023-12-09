@@ -14,7 +14,6 @@
 
 #define MAX_FILE_SIZE 8980480
 
-int done_init = 0;
 /* Returns the number of sectors to allocate for an inode SIZE
  * bytes long. */
 static inline size_t
@@ -259,10 +258,6 @@ void inode_close_helper(struct inode_disk *inode_disk) {
 bool
 inode_create(block_sector_t sector, off_t length, bool dir)
 {
-    // if(done_init == 0){
-    //     inode_init();
-    //     done_init++;
-    // }
     struct inode_disk *disk_inode = NULL;
     bool success = false;
     //printf("goes through inode create \n");
@@ -293,10 +288,10 @@ inode_create(block_sector_t sector, off_t length, bool dir)
             //printf("inode %x\n", disk_inode);
             inode_expand(disk_inode, disk_inode->length, true);
             block_write(fs_device, sector, disk_inode);
-            struct inode *temp_inode = inode_find(sector);
-            if(temp_inode != NULL) {
-                block_write(fs_device, temp_inode->sector, &temp_inode->data);
-            }
+            // struct inode *temp_inode = inode_find(sector);
+            // if(temp_inode != NULL) {
+            //     block_write(fs_device, temp_inode->sector, &temp_inode->data);
+            // }
             success = true;
         }
         free(disk_inode);

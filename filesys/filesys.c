@@ -50,7 +50,6 @@ bool
 filesys_create(const char *name, off_t initial_size, bool dirBool)
 {
     block_sector_t inode_sector = 0;
-    //printf("NAME %s\n", name);
     block_sector_t prev_dir = thread_current()->curr_dir;
     char parsed_name[NAME_MAX + 1];
     bool parsed = parse_file_name(name, parsed_name);
@@ -105,7 +104,6 @@ filesys_open(const char *name)
     if (dir != NULL) {
         dir_lookup(dir, parsed_name, &inode);
     }
-    //printf("after dir lookup %p \n", inode);
     dir_close(dir);
     thread_current()->curr_dir = prev_dir;
 
