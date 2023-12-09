@@ -13,6 +13,7 @@ Saumya Jain saumyajain@utexas.edu
 David Li davidli216@utexas.edu
 Siddhant Pandit panditsiddhant.sp@utexas.edu
 
+
 ---- PRELIMINARIES ----
 
 >> If you have any preliminary comments on your submission, notes for the
@@ -31,8 +32,77 @@ Siddhant Pandit panditsiddhant.sp@utexas.edu
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+These are the elements that we added into the inode_disk struct for
+indexed and extensible files.
+
+within inode.h
+
+struct inode_disk {
+    uint32_t       direct_inode_index; - this was used for indexing into the block_array
+    it saves the value of the direct index that you are at when storing your block_sector
+    total of 119 direct blocks 
+
+    uint32_t       indirect_inode_index; - this was used for indexing into the block_array
+    it saves the value of the indirect index that you are at when storing your block_sector
+    total of 1 indirect blocks 
+
+    uint32_t       double_indirect_inode_index; - this was used for indexing into the block_array
+    it saves the value of the double indirect index that you are at when storing your block_sector
+    total of 1 double indirect blocks 
+
+
+    block_sector_t block_array[TOTAL_BLOCKS_SIZE]; - this was used for storing the actual block_sector
+    all the block write and block reads are on this - pointers for data, indirect, and doubly indirect blocks 
+
+    bool directory; - used for storing whether the inode_disk is a directory or its not - vital towards
+    how we create and remove- different for files and directoires 
+
+    bool used; - mainly used for debugging purposes was used for seeing whether the inode_disk was used 
+}
+
+struct contents { // used for indirect and doubly indirect blocks mainly for the inode_expand function - would do block reads in to the struct 
+    block_sector_t blocks_ptr[BLOCK_SECTOR_SIZE/4]; // pointers to blocks 
+};
+
+
+within struct inode we added 
+ 
+ off_t             read_at_length; - used for keeping track of the index in the inode_read_at function 
+
+#define TOTAL_BLOCKS_SIZE 121 - total size of the block_array 
+#define DIRECT_BLOCKS 119 - number of direct blocks within block_array 
+#define INDIRECT_BLOCKS 1 - number of indirect blocks within block_array 
+#define DOUBLE_INDIRECT_BLOCKS 1 - number of double indirect blocks within block_array 
+
+#define DIRECT_BLOCK_INDEX 0 - the initial index of direct blocks 
+#define INDIRECT_BLOCK_INDEX 119 - the initial index and only index of indirect blocks 
+#define DOUBLE_INDIRECT_BLOCK_INDEX 120 - the initial index and only index of doubly indirect blocks 
+
+#define ROOT_DIR_INDEX 1 - the root directory index within the block array 
+
+
+within inode.c 
+
+#define SECTOR_SIZE 512 - the size of a block in pintos is 512 bytes - define reflects that 
+
+#define MAX_FILE_SIZE 8980480 - the max file size that pintos supports as stated in the pintos docs 
+
 >> A2: What is the maximum size of a file supported by your inode
 >> structure?  Show your work.
+
+With the new inode structure that we added which includes 119 direct blocks, 1 indirect block , and
+one doubly indirect block, we can use those numbers to calculate the max size of a file that our inode can 
+support. Since each block sector size is 512 bytes, and there are 128 block pointers for each indirect and doubly
+indirect block - the max file size is 
+
+formula is File size = num_dir_ptr * 512 + num_indir_ptr * 128 * 512 + num_dbl_indir_ptr * 128 * 128 * 512
+
+119 * 512 = direct block space 
+1 * 128 * 512 = indirect block space - one indirect block has 128 block pointers which each have 512 bytes
+1 * 128 * 128 * 512 = doubly indirect block space - one doubley indirect block will have 128 pointers that points to another 
+128 pointers which points to 512 blocks
+
+in total = (119*512) + (1 * 128 * 512) + (1 * 128 * 128 * 512) = 8515072 bytes or 8.5 MB
 
 ---- RATIONALE ----
 
@@ -42,10 +112,12 @@ Siddhant Pandit panditsiddhant.sp@utexas.edu
 >> structure, and what advantages and disadvantages does your
 >> structure have, compared to a multilevel index?
 
-Our code utilizes a multilevel index structure. We mainly used direct blocks to maintain mapping 
-directly to data points on the disk. For example, the "start" block in the "inode_disk" struct is 
-directly mapped. There is also a singly indirect block and a doubly indirect block. We used these 
-to create directory blocks, bitmap blocks, and data blocks. 
+Our code utilizes a multilevel index structure. This includes having 119 direct blocks, 1 indirect block, and one doubly indirect block.
+We decided to go with a combination of direct, indirect, and doubly indirect in order to allow 8 MB files. Along with this, smaller files
+would use up direct blocks and indirect blocks which provides the optimal combination of fast times for access with being able to grow a
+file. On the other hand, with larger files, doubly indirect blocks allow files that big to grow. Lastly, the basic file system without
+multilevel was vulnerable to externable fragmentation - with our implementation it avoids external fragmentation - our implementation allows 
+noncontiguous blocks to be allocated for the same file eventhough it may need more disk reads to achieve that.
 
                             SUBDIRECTORIES
                             ==============
@@ -72,8 +144,6 @@ to struct thread:
 Removed struct dir and changed all directories to be of type struct file to make syscalls with directories easier
 to implement.
 
-
-
 ---- ALGORITHMS ----
 
 >> B2: Describe your code for traversing a user-specified path.  How
@@ -92,6 +162,7 @@ opened directory. Finally, when the last file in the path is reached, the name o
 
 >> B6: Explain why you chose to represent the current directory of a
 >> process the way you did.
+
 We added a block_sector_t variable called "curr_dir" to the thread struct, which corresponds to the block block_sector
 of the current working directory. The block_sector_t can be used to open an inode which can in turn be used to open the
 directory. We chose to represent curr_dir as a block_sector_t because block sectors are permanent and are always associated
