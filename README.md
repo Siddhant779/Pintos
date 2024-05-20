@@ -2,7 +2,8 @@ Pintos
 ======
 
 Pintos labs for EE 461S at UT Austin.
-release/project3 includes code for both virtual memory and user program
+
+release/project3 branch includes code for both virtual memory and user program
 
 ### About
 
